@@ -14,13 +14,193 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ingredients: {
+        Row: {
+          calories_per_100g: number
+          carbs_per_100g: number
+          created_at: string
+          fats_per_100g: number
+          id: string
+          name: string
+          protein_per_100g: number
+          user_id: string | null
+        }
+        Insert: {
+          calories_per_100g?: number
+          carbs_per_100g?: number
+          created_at?: string
+          fats_per_100g?: number
+          id?: string
+          name: string
+          protein_per_100g?: number
+          user_id?: string | null
+        }
+        Update: {
+          calories_per_100g?: number
+          carbs_per_100g?: number
+          created_at?: string
+          fats_per_100g?: number
+          id?: string
+          name?: string
+          protein_per_100g?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      menu_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_published: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      portion_units: {
+        Row: {
+          average_grams: number
+          created_at: string
+          id: string
+          max_grams: number | null
+          min_grams: number | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          average_grams: number
+          created_at?: string
+          id?: string
+          max_grams?: number | null
+          min_grams?: number | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          average_grams?: number
+          created_at?: string
+          id?: string
+          max_grams?: number | null
+          min_grams?: number | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          restaurant_name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+          restaurant_name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          restaurant_name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      recipe_items: {
+        Row: {
+          created_at: string
+          grams: number | null
+          id: string
+          ingredient_id: string
+          is_modifier: boolean
+          menu_item_id: string
+          modifier_type: string | null
+          portion_quantity: number | null
+          portion_unit_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          grams?: number | null
+          id?: string
+          ingredient_id: string
+          is_modifier?: boolean
+          menu_item_id: string
+          modifier_type?: string | null
+          portion_quantity?: number | null
+          portion_unit_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          grams?: number | null
+          id?: string
+          ingredient_id?: string
+          is_modifier?: boolean
+          menu_item_id?: string
+          modifier_type?: string | null
+          portion_quantity?: number | null
+          portion_unit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_items_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_items_portion_unit_id_fkey"
+            columns: ["portion_unit_id"]
+            isOneToOne: false
+            referencedRelation: "portion_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      slugify: { Args: { value: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
