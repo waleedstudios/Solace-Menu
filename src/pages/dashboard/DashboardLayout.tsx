@@ -44,7 +44,7 @@ const DashboardLayout = () => {
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-md bg-gradient-hero" />
-            <span className="font-display text-xl">MacroMenu</span>
+            <span className="font-display text-xl">Solace Menu</span>
           </Link>
           <div className="flex items-center gap-2">
             {profile && (

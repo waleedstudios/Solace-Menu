@@ -48,7 +48,7 @@ const Auth = () => {
           },
         });
         if (error) { toast.error(error.message); return; }
-        toast.success("Welcome to MacroMenu");
+        toast.success("Welcome to Solace Menu");
       } else {
         const parsed = signinSchema.safeParse(form);
         if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
@@ -74,7 +74,7 @@ const Auth = () => {
           <div className="text-center mb-10">
             <Link to="/" className="inline-flex items-center gap-2 mb-6">
               <div className="h-8 w-8 rounded-md bg-gradient-hero shadow-sm-soft" />
-              <span className="font-display text-2xl">MacroMenu</span>
+              <span className="font-display text-2xl">Solace Menu</span>
             </Link>
             <h1 className="font-display text-4xl mb-2">
               {mode === "signup" ? "Create your account" : "Welcome back"}
@@ -110,7 +110,7 @@ const Auth = () => {
           </div>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
-            {mode === "signup" ? "Already have an account? " : "New to MacroMenu? "}
+            {mode === "signup" ? "Already have an account? " : "New to Solace Menu? "}
             <button
               className="text-primary font-medium hover:underline"
               onClick={() => setParams(mode === "signup" ? {} : { mode: "signup" })}
