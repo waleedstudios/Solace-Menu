@@ -7,52 +7,52 @@
 @layer base {
   :root {
     /* Solace Menu — editorial minimal SaaS */
-    --background: 40 33% 98%;
-    --foreground: 160 25% 10%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 7%;
 
     --card: 0 0% 100%;
-    --card-foreground: 160 25% 10%;
+    --card-foreground: 0 0% 7%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 160 25% 10%;
+    --popover-foreground: 0 0% 7%;
 
-    /* Deep emerald — confident, fresh, professional */
-    --primary: 158 55% 18%;
-    --primary-foreground: 40 33% 98%;
-    --primary-glow: 158 45% 32%;
+    /* Matte black primary, sage accent */
+    --primary: 0 0% 7%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 88 17% 66%;
 
-    --secondary: 40 25% 94%;
-    --secondary-foreground: 160 25% 10%;
+    --secondary: 96 16% 93%;
+    --secondary-foreground: 0 0% 7%;
 
-    --muted: 40 20% 95%;
-    --muted-foreground: 160 8% 42%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
 
-    --accent: 38 80% 55%;
-    --accent-foreground: 160 25% 10%;
+    --accent: 88 17% 66%;
+    --accent-foreground: 0 0% 7%;
+    --accent-soft: 96 16% 87%;
 
     --destructive: 0 70% 45%;
-    --destructive-foreground: 40 33% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 40 15% 89%;
-    --input: 40 15% 89%;
-    --ring: 158 55% 18%;
+    --border: 0 0% 92%;
+    --input: 0 0% 92%;
+    --ring: 0 0% 7%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
-    /* Macro hues */
     --macro-calories: 28 70% 50%;
     --macro-protein: 0 65% 50%;
     --macro-carbs: 38 80% 55%;
     --macro-fats: 200 60% 45%;
 
-    /* Gradients & shadows */
-    --gradient-hero: linear-gradient(135deg, hsl(158 55% 18%) 0%, hsl(158 45% 28%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(40 33% 98%) 0%, hsl(40 25% 94%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 7%) 0%, hsl(0 0% 15%) 100%);
+    --gradient-sage: linear-gradient(135deg, hsl(96 16% 93%) 0%, hsl(88 17% 80%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(96 16% 97%) 100%);
 
-    --shadow-sm: 0 1px 2px hsl(160 25% 10% / 0.04);
-    --shadow-md: 0 4px 16px -4px hsl(160 25% 10% / 0.08);
-    --shadow-lg: 0 20px 60px -20px hsl(160 25% 10% / 0.18);
-    --shadow-glow: 0 8px 40px -12px hsl(158 55% 18% / 0.35);
+    --shadow-sm: 0 1px 2px hsl(0 0% 7% / 0.04);
+    --shadow-md: 0 4px 24px -6px hsl(0 0% 7% / 0.08);
+    --shadow-lg: 0 30px 80px -30px hsl(0 0% 7% / 0.25);
+    --shadow-glow: 0 20px 60px -20px hsl(88 17% 50% / 0.35);
 
     --transition: cubic-bezier(0.32, 0.72, 0, 1);
 
