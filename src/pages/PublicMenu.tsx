@@ -64,7 +64,7 @@ const PublicMenu = () => {
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Menu</p>
             <h1 className="font-display text-2xl md:text-3xl leading-tight">{profile?.restaurant_name}</h1>
           </div>
-          <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">Powered by MacroMenu</Link>
+          <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">Powered by Solace Menu</Link>
         </div>
       </header>
 
@@ -106,7 +106,7 @@ const PublicMenu = () => {
 
       <footer className="border-t border-border/60 py-8 mt-10">
         <div className="container text-center text-xs text-muted-foreground">
-          Macros calculated from standardized recipes · <Link to="/" className="hover:text-foreground">MacroMenu</Link>
+          Macros calculated from standardized recipes · <Link to="/" className="hover:text-foreground">Solace Menu</Link>
         </div>
       </footer>
     </div>

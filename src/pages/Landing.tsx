@@ -22,7 +22,7 @@ const Landing = () => {
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-md bg-gradient-hero shadow-sm-soft" />
-            <span className="font-display text-2xl leading-none">MacroMenu</span>
+            <span className="font-display text-2xl leading-none">Solace Menu</span>
           </Link>
           <nav className="flex items-center gap-2">
             {!loading && (user ? (
@@ -238,7 +238,7 @@ const Landing = () => {
 
       <footer className="border-t border-border/60 py-8">
         <div className="container text-sm text-muted-foreground flex justify-between flex-wrap gap-2">
-          <span>© MacroMenu</span>
+          <span>© Solace Menu</span>
           <span>Built for accurate kitchens</span>
         </div>
       </footer>
