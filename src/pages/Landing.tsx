@@ -8,6 +8,7 @@ import dishBowl from "@/assets/dish-bowl.jpg";
 import { useAuth } from "@/hooks/useAuth";
 import { InteractiveMenuDemo } from "@/components/landing/InteractiveMenuDemo";
 import { DashboardPreview } from "@/components/landing/DashboardPreview";
+import { Logo } from "@/components/Logo";
 
 const features = [
   { icon: Calculator, title: "AI Macro Calculation", desc: "Detect ingredients, infer portions, and verify macros against a 400k+ food database." },
@@ -41,12 +42,7 @@ const Landing = () => {
       {/* Nav */}
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-xl bg-foreground text-background">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <span className="font-display text-2xl leading-none">Solace Menu</span>
-          </Link>
+          <Logo size={36} />
           <nav className="hidden items-center gap-8 text-sm text-foreground/70 md:flex">
             <a href="#demo" className="hover:text-foreground transition">Live demo</a>
             <a href="#features" className="hover:text-foreground transition">Features</a>
@@ -337,10 +333,7 @@ const Landing = () => {
       <footer className="border-t border-border">
         <div className="container grid gap-10 py-16 md:grid-cols-[2fr,1fr,1fr,1fr]">
           <div className="space-y-4">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="grid h-8 w-8 place-items-center rounded-xl bg-foreground text-background"><Sparkles className="h-4 w-4" /></div>
-              <span className="font-display text-2xl leading-none">Solace Menu</span>
-            </Link>
+            <Logo size={36} />
             <p className="max-w-sm text-sm text-muted-foreground">AI nutrition intelligence for modern restaurants. Built with care in your kitchen, not a lab.</p>
             <div className="flex gap-2">
               {[Instagram, Twitter, Linkedin].map((I, i) => (
