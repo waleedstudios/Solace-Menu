@@ -337,7 +337,7 @@ const Landing = () => {
         <div className="container grid gap-10 py-16 md:grid-cols-[2fr,1fr,1fr,1fr]">
           <div className="space-y-4">
             <Logo size={36} />
-            <p className="max-w-sm text-sm text-muted-foreground">AI nutrition intelligence for modern restaurants. Built with care in your kitchen, not a lab.</p>
+            <p className="max-w-sm text-sm text-muted-foreground">Nutritionist-verified AI nutrition intelligence for modern restaurants. Built with care by real experts.</p>
             <div className="flex gap-2">
               {[Instagram, Twitter, Linkedin].map((I, i) => (
                 <a key={i} href="#" className="grid h-9 w-9 place-items-center rounded-full border border-border transition hover:bg-foreground hover:text-background">
