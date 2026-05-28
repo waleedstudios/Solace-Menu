@@ -11,7 +11,7 @@ import { DashboardPreview } from "@/components/landing/DashboardPreview";
 import { Logo } from "@/components/Logo";
 
 const features = [
-  { icon: Calculator, title: "AI Macro Calculation", desc: "Detect ingredients, infer portions, and verify macros against a 400k+ food database." },
+  { icon: Calculator, title: "Nutritionist-Verified Macros", desc: "AI detects ingredients and scales portions — every macro is reviewed and verified by our in-house nutritionist." },
   { icon: Salad, title: "Portion Intelligence", desc: "Define units once — grams, cups, slices — and Solace scales every recipe automatically." },
   { icon: QrCode, title: "QR Nutrition Menus", desc: "Generate a beautiful public menu at /r/your-slug — print one QR and you're live." },
   { icon: ShieldCheck, title: "Allergen Tracking", desc: "Surface gluten, dairy, nut, soy and sesame at the dish and modifier level." },
