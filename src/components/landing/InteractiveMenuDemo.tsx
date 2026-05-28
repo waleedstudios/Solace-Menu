@@ -1,13 +1,14 @@
-import { useMemo, useState } from "react";
-import { Minus, Plus, Leaf, Wheat, Milk, Flame, Drumstick, Cookie, Droplet, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Minus, Plus, Leaf, Wheat, Milk, Flame, Drumstick, Cookie, Droplet, Sparkles, Search } from "lucide-react";
 import dishBowl from "@/assets/dish-bowl.jpg";
 import dishSalmon from "@/assets/dish-salmon.jpg";
 import dishPoke from "@/assets/dish-poke.jpg";
 import dishPizza from "@/assets/dish-pizza.jpg";
 
 type Modifier = { id: string; label: string; cal: number; p: number; c: number; f: number };
+type Tag = "High protein" | "Lean" | "Veg" | "Omega-3";
 type Dish = {
-  id: string; name: string; tag: string; img: string;
+  id: string; name: string; tag: Tag; img: string;
   base: { cal: number; p: number; c: number; f: number };
   allergens: ("gluten" | "dairy" | "nuts")[];
   mods: Modifier[];
@@ -15,7 +16,7 @@ type Dish = {
 
 const DISHES: Dish[] = [
   {
-    id: "bowl", name: "Harvest Power Bowl", tag: "High Protein", img: dishBowl,
+    id: "bowl", name: "Harvest Power Bowl", tag: "High protein", img: dishBowl,
     base: { cal: 540, p: 38, c: 52, f: 18 },
     allergens: [],
     mods: [
@@ -43,7 +44,7 @@ const DISHES: Dish[] = [
     ],
   },
   {
-    id: "pizza", name: "Margherita", tag: "Vegetarian", img: dishPizza,
+    id: "pizza", name: "Margherita", tag: "Veg", img: dishPizza,
     base: { cal: 720, p: 28, c: 88, f: 24 },
     allergens: ["gluten", "dairy"],
     mods: [
@@ -52,6 +53,8 @@ const DISHES: Dish[] = [
     ],
   },
 ];
+
+const FILTERS: ("All" | Tag)[] = ["All", "High protein", "Lean", "Veg", "Omega-3"];
 
 const AllergenIcon = ({ a }: { a: "gluten" | "dairy" | "nuts" }) => {
   const map = { gluten: Wheat, dairy: Milk, nuts: Leaf };
@@ -63,25 +66,54 @@ const AllergenIcon = ({ a }: { a: "gluten" | "dairy" | "nuts" }) => {
   );
 };
 
-const MacroStat = ({ label, value, suffix, color, max }: { label: string; value: number; suffix: string; color: string; max: number }) => {
+const MacroStat = ({ label, value, suffix, color, max, pulseKey }: { label: string; value: number; suffix: string; color: string; max: number; pulseKey: number }) => {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between text-xs">
         <span className="font-medium text-foreground/70">{label}</span>
-        <span className="font-display text-base text-foreground tabular-nums">{Math.round(value)}{suffix}</span>
+        <span
+          key={pulseKey}
+          className="font-display text-base text-foreground tabular-nums inline-block origin-right animate-macro-pop"
+        >
+          {Math.round(value)}{suffix}
+        </span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
-        <div className="h-full rounded-full transition-[width] duration-500 ease-out" style={{ width: `${pct}%`, background: color }} />
+        <div
+          className="h-full rounded-full transition-all duration-500 ease-out"
+          style={{ width: `${pct}%`, background: color, boxShadow: `0 0 12px ${color}55` }}
+        />
       </div>
     </div>
   );
 };
 
 export const InteractiveMenuDemo = () => {
+  const [filter, setFilter] = useState<"All" | Tag>("All");
+  const [search, setSearch] = useState("");
   const [activeId, setActiveId] = useState(DISHES[0].id);
   const [portion, setPortion] = useState(1);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [pulseKey, setPulseKey] = useState(0);
+  const firstRender = useRef(true);
+
+  const filteredDishes = useMemo(() => {
+    return DISHES.filter((d) => {
+      const matchTag = filter === "All" || d.tag === filter;
+      const matchSearch = !search.trim() || d.name.toLowerCase().includes(search.trim().toLowerCase());
+      return matchTag && matchSearch;
+    });
+  }, [filter, search]);
+
+  // If active dish was filtered out, switch to first visible
+  useEffect(() => {
+    if (filteredDishes.length && !filteredDishes.find((d) => d.id === activeId)) {
+      setActiveId(filteredDishes[0].id);
+      setPortion(1);
+      setSelected({});
+    }
+  }, [filteredDishes, activeId]);
 
   const dish = DISHES.find((d) => d.id === activeId)!;
 
@@ -93,31 +125,66 @@ export const InteractiveMenuDemo = () => {
     return { cal: m.cal * portion, p: m.p * portion, c: m.c * portion, f: m.f * portion };
   }, [dish, selected, portion]);
 
+  // Pulse macros whenever they change (skip first mount)
+  useEffect(() => {
+    if (firstRender.current) { firstRender.current = false; return; }
+    setPulseKey((k) => k + 1);
+  }, [macros.cal, macros.p, macros.c, macros.f]);
+
   const switchDish = (id: string) => { setActiveId(id); setPortion(1); setSelected({}); };
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.1fr,1fr]">
       {/* Menu list */}
       <div className="rounded-3xl border border-border bg-card p-3 shadow-md-soft">
-        <div className="mb-3 flex items-center justify-between px-3 pt-2">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <span className="inline-flex h-2 w-2 rounded-full bg-accent" />
-            Live menu · Nourish Kitchen
+        <div className="mb-3 flex flex-col gap-3 px-3 pt-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span className="inline-flex h-2 w-2 rounded-full bg-accent animate-pulse" />
+              Live menu · Nourish Kitchen
+            </div>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search dishes"
+                className="h-8 w-36 rounded-full border border-border bg-background pl-8 pr-3 text-xs outline-none transition focus:w-48 focus:border-foreground/40"
+              />
+            </div>
           </div>
-          <div className="hidden gap-1.5 sm:flex">
-            {["All", "High protein", "Lean", "Veg"].map((t, i) => (
-              <span key={t} className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${i === 0 ? "bg-foreground text-background" : "bg-secondary text-foreground/60"}`}>{t}</span>
-            ))}
+          <div className="flex flex-wrap gap-1.5">
+            {FILTERS.map((t) => {
+              const active = filter === t;
+              return (
+                <button
+                  key={t}
+                  onClick={() => setFilter(t)}
+                  className={`rounded-full px-3 py-1 text-[11px] font-medium transition-all ${
+                    active
+                      ? "bg-foreground text-background shadow-sm-soft"
+                      : "bg-secondary text-foreground/60 hover:bg-secondary/60 hover:text-foreground"
+                  }`}
+                >
+                  {t}
+                </button>
+              );
+            })}
           </div>
         </div>
         <div className="grid gap-2">
-          {DISHES.map((d) => {
+          {filteredDishes.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+              No dishes match those filters.
+            </div>
+          )}
+          {filteredDishes.map((d) => {
             const active = d.id === activeId;
             return (
               <button
                 key={d.id}
                 onClick={() => switchDish(d.id)}
-                className={`group flex w-full items-center gap-4 rounded-2xl p-3 text-left transition-all ${active ? "bg-secondary ring-1 ring-foreground/10" : "hover:bg-secondary/60"}`}
+                className={`group flex w-full items-center gap-4 rounded-2xl p-3 text-left transition-all duration-300 animate-fade-in ${active ? "bg-secondary ring-1 ring-foreground/10" : "hover:bg-secondary/60"}`}
               >
                 <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
                   <img src={d.img} alt={d.name} loading="lazy" width={128} height={128} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
@@ -144,7 +211,7 @@ export const InteractiveMenuDemo = () => {
       {/* Detail panel */}
       <div className="relative overflow-hidden rounded-3xl border border-border bg-card shadow-lg-soft">
         <div className="relative h-56 overflow-hidden">
-          <img src={dish.img} alt={dish.name} loading="lazy" width={1024} height={1024} className="h-full w-full object-cover transition-all duration-700" key={dish.id} />
+          <img src={dish.img} alt={dish.name} loading="lazy" width={1024} height={1024} className="h-full w-full object-cover transition-all duration-700 animate-fade-in" key={dish.id} />
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/10 to-transparent" />
           <div className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-background/80 px-3 py-1 text-[11px] font-medium backdrop-blur">
             <Sparkles className="h-3 w-3 text-accent" /> AI verified macros
@@ -159,14 +226,19 @@ export const InteractiveMenuDemo = () => {
             </div>
             <div className="text-right">
               <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Calories</div>
-              <div className="font-display text-3xl tabular-nums">{Math.round(macros.cal)}</div>
+              <div
+                key={`cal-${pulseKey}`}
+                className="font-display text-3xl tabular-nums inline-block origin-right animate-macro-pop"
+              >
+                {Math.round(macros.cal)}
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            <MacroStat label="Protein" value={macros.p} suffix="g" color="hsl(var(--macro-protein))" max={80} />
-            <MacroStat label="Carbs" value={macros.c} suffix="g" color="hsl(var(--macro-carbs))" max={120} />
-            <MacroStat label="Fats" value={macros.f} suffix="g" color="hsl(var(--macro-fats))" max={50} />
+            <MacroStat label="Protein" value={macros.p} suffix="g" color="hsl(var(--macro-protein))" max={80} pulseKey={pulseKey} />
+            <MacroStat label="Carbs" value={macros.c} suffix="g" color="hsl(var(--macro-carbs))" max={120} pulseKey={pulseKey} />
+            <MacroStat label="Fats" value={macros.f} suffix="g" color="hsl(var(--macro-fats))" max={50} pulseKey={pulseKey} />
           </div>
 
           {/* Portion */}
@@ -176,8 +248,8 @@ export const InteractiveMenuDemo = () => {
               <div className="font-display text-lg tabular-nums">{portion.toFixed(2)}×</div>
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={() => setPortion((p) => Math.max(0.25, +(p - 0.25).toFixed(2)))} className="grid h-8 w-8 place-items-center rounded-full bg-background hover:bg-foreground hover:text-background transition"><Minus className="h-3.5 w-3.5" /></button>
-              <button onClick={() => setPortion((p) => Math.min(3, +(p + 0.25).toFixed(2)))} className="grid h-8 w-8 place-items-center rounded-full bg-background hover:bg-foreground hover:text-background transition"><Plus className="h-3.5 w-3.5" /></button>
+              <button onClick={() => setPortion((p) => Math.max(0.25, +(p - 0.25).toFixed(2)))} className="grid h-8 w-8 place-items-center rounded-full bg-background hover:bg-foreground hover:text-background transition active:scale-90"><Minus className="h-3.5 w-3.5" /></button>
+              <button onClick={() => setPortion((p) => Math.min(3, +(p + 0.25).toFixed(2)))} className="grid h-8 w-8 place-items-center rounded-full bg-background hover:bg-foreground hover:text-background transition active:scale-90"><Plus className="h-3.5 w-3.5" /></button>
             </div>
           </div>
 
@@ -191,7 +263,11 @@ export const InteractiveMenuDemo = () => {
                   <button
                     key={m.id}
                     onClick={() => setSelected((s) => ({ ...s, [m.id]: !s[m.id] }))}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${on ? "border-foreground bg-foreground text-background" : "border-border bg-background hover:border-foreground/40"}`}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 active:scale-95 ${
+                      on
+                        ? "border-foreground bg-foreground text-background shadow-sm-soft scale-[1.02]"
+                        : "border-border bg-background hover:border-foreground/40 hover:-translate-y-0.5"
+                    }`}
                   >
                     {on ? "✓ " : "+ "}{m.label}
                   </button>
