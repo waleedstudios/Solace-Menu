@@ -11,7 +11,7 @@ import { DashboardPreview } from "@/components/landing/DashboardPreview";
 import { Logo } from "@/components/Logo";
 
 const features = [
-  { icon: Calculator, title: "AI Macro Calculation", desc: "Detect ingredients, infer portions, and verify macros against a 400k+ food database." },
+  { icon: Calculator, title: "Nutritionist-Verified Macros", desc: "AI detects ingredients and scales portions — every macro is reviewed and verified by our in-house nutritionist." },
   { icon: Salad, title: "Portion Intelligence", desc: "Define units once — grams, cups, slices — and Solace scales every recipe automatically." },
   { icon: QrCode, title: "QR Nutrition Menus", desc: "Generate a beautiful public menu at /r/your-slug — print one QR and you're live." },
   { icon: ShieldCheck, title: "Allergen Tracking", desc: "Surface gluten, dairy, nut, soy and sesame at the dish and modifier level." },
@@ -70,15 +70,18 @@ const Landing = () => {
         <div className="container relative grid gap-16 py-20 md:py-28 lg:grid-cols-[1.05fr,1fr] lg:items-center">
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs font-medium backdrop-blur">
-              <span className="grid h-4 w-4 place-items-center rounded-full bg-accent"><Sparkles className="h-2.5 w-2.5" /></span>
-              New · Solace AI agent v2 is live
+              <span className="grid h-4 w-4 place-items-center rounded-full bg-accent"><ShieldCheck className="h-2.5 w-2.5" /></span>
+              Nutritionist verified · Backed by real experts
             </div>
-            <h1 className="font-display text-[clamp(3rem,7vw,6rem)] leading-[0.95] tracking-tight">
-              Smarter nutrition.<br />
-              <span className="italic text-foreground/70">Better menus.</span>
-            </h1>
+            <div className="flex flex-col items-start">
+              <Logo size={120} withWordmark={false} />
+              <h1 className="mt-2 font-display text-[clamp(2.5rem,6vw,4.5rem)] leading-[0.95] tracking-tight">
+                Smarter nutrition.<br />
+                <span className="italic text-foreground/70">Better menus.</span>
+              </h1>
+            </div>
             <p className="max-w-xl text-lg text-muted-foreground">
-              AI-powered interactive menus with real-time nutrition, macros, and portion intelligence — built for modern restaurants who care about what they serve.
+              Nutritionist-verified interactive menus with real-time nutrition, macros, and portion intelligence — built for modern restaurants who care about what they serve.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <Button size="lg" onClick={() => navigate("/auth")} className="group rounded-full px-6 h-12">
@@ -120,10 +123,10 @@ const Landing = () => {
 
               <div className="absolute -left-2 bottom-10 rounded-2xl bg-background/90 px-4 py-3 shadow-lg-soft backdrop-blur-xl border border-border animate-float-slow">
                 <div className="flex items-center gap-2">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-accent-soft"><Sparkles className="h-3.5 w-3.5" /></span>
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-accent-soft"><ShieldCheck className="h-3.5 w-3.5" /></span>
                   <div>
-                    <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">AI suggests</div>
-                    <div className="text-xs font-medium">Swap rice → cauliflower (−180 cal)</div>
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Nutritionist verified</div>
+                    <div className="text-xs font-medium">Macros reviewed by our team</div>
                   </div>
                 </div>
               </div>
@@ -334,7 +337,7 @@ const Landing = () => {
         <div className="container grid gap-10 py-16 md:grid-cols-[2fr,1fr,1fr,1fr]">
           <div className="space-y-4">
             <Logo size={36} />
-            <p className="max-w-sm text-sm text-muted-foreground">AI nutrition intelligence for modern restaurants. Built with care in your kitchen, not a lab.</p>
+            <p className="max-w-sm text-sm text-muted-foreground">Nutritionist-verified AI nutrition intelligence for modern restaurants. Built with care by real experts.</p>
             <div className="flex gap-2">
               {[Instagram, Twitter, Linkedin].map((I, i) => (
                 <a key={i} href="#" className="grid h-9 w-9 place-items-center rounded-full border border-border transition hover:bg-foreground hover:text-background">
