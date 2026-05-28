@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LayoutGrid, Carrot, Ruler, ExternalLink, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type Profile = { restaurant_name: string; slug: string };
 
