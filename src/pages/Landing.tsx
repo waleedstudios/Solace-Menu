@@ -123,10 +123,10 @@ const Landing = () => {
 
               <div className="absolute -left-2 bottom-10 rounded-2xl bg-background/90 px-4 py-3 shadow-lg-soft backdrop-blur-xl border border-border animate-float-slow">
                 <div className="flex items-center gap-2">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-accent-soft"><Sparkles className="h-3.5 w-3.5" /></span>
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-accent-soft"><ShieldCheck className="h-3.5 w-3.5" /></span>
                   <div>
-                    <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">AI suggests</div>
-                    <div className="text-xs font-medium">Swap rice → cauliflower (−180 cal)</div>
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Nutritionist verified</div>
+                    <div className="text-xs font-medium">Macros reviewed by our team</div>
                   </div>
                 </div>
               </div>
