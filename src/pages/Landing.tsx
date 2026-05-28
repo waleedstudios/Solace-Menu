@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { InteractiveMenuDemo } from "@/components/landing/InteractiveMenuDemo";
 import { DashboardPreview } from "@/components/landing/DashboardPreview";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const features = [
   { icon: Calculator, title: "Nutritionist-Verified Macros", desc: "AI detects ingredients and scales portions — every macro is reviewed and verified by our in-house nutritionist." },
