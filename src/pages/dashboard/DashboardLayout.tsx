@@ -46,6 +46,7 @@ const DashboardLayout = () => {
         <div className="container flex h-16 items-center justify-between">
           <Logo size={32} />
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             {profile && (
               <Button variant="outline" size="sm" asChild>
                 <a href={`/r/${profile.slug}`} target="_blank" rel="noreferrer">
