@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 const signupSchema = z.object({
   restaurant_name: z.string().trim().min(2, "Restaurant name is required").max(80),
@@ -72,10 +73,7 @@ const Auth = () => {
       <main className="flex-1 flex items-center justify-center px-6 pb-16">
         <div className="w-full max-w-md">
           <div className="text-center mb-10">
-            <Link to="/" className="inline-flex items-center gap-2 mb-6">
-              <div className="h-8 w-8 rounded-md bg-gradient-hero shadow-sm-soft" />
-              <span className="font-display text-2xl">Solace Menu</span>
-            </Link>
+            <Logo size={40} className="mb-6" />
             <h1 className="font-display text-4xl mb-2">
               {mode === "signup" ? "Create your account" : "Welcome back"}
             </h1>

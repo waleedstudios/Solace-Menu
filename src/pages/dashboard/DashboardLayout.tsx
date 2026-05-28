@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, Carrot, Ruler, ExternalLink, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import { Logo } from "@/components/Logo";
 
 type Profile = { restaurant_name: string; slug: string };
 
@@ -42,10 +43,7 @@ const DashboardLayout = () => {
     <div className="min-h-screen bg-gradient-subtle">
       <header className="border-b border-border bg-card">
         <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-md bg-gradient-hero" />
-            <span className="font-display text-xl">Solace Menu</span>
-          </Link>
+          <Logo size={32} />
           <div className="flex items-center gap-2">
             {profile && (
               <Button variant="outline" size="sm" asChild>
