@@ -1,3 +1,4 @@
+import type React from "react";
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -11,7 +12,8 @@ type Value = {
   canManage: boolean; isOwner: boolean; loading: boolean; reload: () => void;
   memberships: { restaurant_id: string; role: Role; name: string }[]; switchTo: (id: string) => void;
 };
-const C = createContext<Value | null>(null);
+// Keep one context instance across hot reloads so provider and consumers never mismatch.
+const C: React.Context<Value | null> = ((globalThis as any).__solaceRestaurantCtx ??= createContext<Value | null>(null));
 
 export function RestaurantProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
