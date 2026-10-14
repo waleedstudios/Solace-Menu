@@ -52,6 +52,25 @@ const labelSchema = {
   required: ["uncertain_fields"],
 };
 
+const menuSchema = {
+  type: "object",
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" }, description: str, category: str,
+          price: { ...num, description: "Printed price, number only" },
+          ingredients: { type: "array", items: { type: "string" }, description: "Ingredients named or clearly listed for this dish; simple lowercase names" },
+        },
+        required: ["name", "ingredients"],
+      },
+    },
+  },
+  required: ["items"],
+};
+
 // Strict JSON schema: every property required, nullable where optional, no extra keys.
 function strict(sc: any): any {
   if (sc.type === "object" || (Array.isArray(sc.type) && sc.type.includes("object"))) {
@@ -80,7 +99,7 @@ Deno.serve(async (req) => {
     if (!user) return json({ error: "Not signed in" }, 401);
 
     const { kind, restaurant_id, paths } = await req.json();
-    if (!["invoice", "label"].includes(kind) || !restaurant_id || !Array.isArray(paths) || !paths.length) return json({ error: "Bad request" }, 400);
+    if (!["invoice", "label", "menu"].includes(kind) || !restaurant_id || !Array.isArray(paths) || !paths.length) return json({ error: "Bad request" }, 400);
     const { data: isMember } = await supabase.rpc("is_member", { _restaurant: restaurant_id });
     if (!isMember) return json({ error: "Forbidden" }, 403);
 
@@ -88,6 +107,8 @@ Deno.serve(async (req) => {
       type: "input_text",
       text: kind === "invoice"
         ? "Extract this supplier invoice / receipt (all pages). Read only what is printed; use null for anything not visible. Never guess pack sizes. Flag any field you are unsure of. Credits/returns use negative quantities and totals."
+        : kind === "menu"
+        ? "Extract every dish on this restaurant menu. Copy names, descriptions, categories and prices as printed. List only ingredients that are printed or explicitly part of the dish name/description; never invent quantities."
         : "Extract this nutrition facts label. Read only printed values; use null when absent. Do not infer allergens; only copy a printed Contains statement.",
     }];
     for (const p of paths.slice(0, 10)) {
@@ -99,7 +120,7 @@ Deno.serve(async (req) => {
       content.push(isPdf ? { type: "input_file", file_url: data.signedUrl } : { type: "input_image", image_url: data.signedUrl });
     }
 
-    const schema = strict(kind === "invoice" ? invoiceSchema : labelSchema);
+    const schema = strict(kind === "invoice" ? invoiceSchema : kind === "menu" ? menuSchema : labelSchema);
     const r = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
       headers: { "Lovable-API-Key": Deno.env.get("LOVABLE_API_KEY")!, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },

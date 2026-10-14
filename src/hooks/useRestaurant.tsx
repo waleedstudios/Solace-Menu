@@ -1,7 +1,8 @@
+import type React from "react";
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
-import type { Ctx, CostIngredient, CostLine, CostRecipe } from "@/lib/costing";
+import { computeRecipe, type Ctx, type CostIngredient, type CostLine, type CostRecipe } from "@/lib/costing";
 
 export type Role = "owner" | "manager" | "staff";
 type Restaurant = { id: string; name: string; price_alert_threshold_pct: number; invoice_retention_days: number | null };
@@ -11,7 +12,8 @@ type Value = {
   canManage: boolean; isOwner: boolean; loading: boolean; reload: () => void;
   memberships: { restaurant_id: string; role: Role; name: string }[]; switchTo: (id: string) => void;
 };
-const C = createContext<Value | null>(null);
+// Keep one context instance across hot reloads so provider and consumers never mismatch.
+const C: React.Context<Value | null> = ((globalThis as any).__solaceRestaurantCtx ??= createContext<Value | null>(null));
 
 export function RestaurantProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -53,6 +55,12 @@ export async function loadCostCtx(restaurantId: string): Promise<Ctx & { recipeL
   ]);
   const ids = (recs || []).map((r) => r.id);
   const { data: lines } = ids.length ? await supabase.from("recipe_lines").select("*").in("recipe_id", ids).order("position") : { data: [] as any[] };
+  const ctx: Ctx = {
+    ingredients: new Map((ings || []).map((i: any) => [i.id, i as CostIngredient])),
+    recipes: new Map((recs || []).map((r: any) => [r.id, r as CostRecipe])),
+    lines: (lines || []) as CostLine[],
+  };
+  syncPublicMacros(recs || [], ctx);
   return {
     ingredients: new Map((ings || []).map((i: any) => [i.id, i as CostIngredient])),
     recipes: new Map((recs || []).map((r: any) => [r.id, r as CostRecipe])),
@@ -60,4 +68,17 @@ export async function loadCostCtx(restaurantId: string): Promise<Ctx & { recipeL
     recipeList: (recs || []) as any,
     ingredientList: ings || [],
   };
+}
+
+/** Keep the public menu's macros in step with recipe nutrition. Incomplete nutrition is published as null (never zero). */
+function syncPublicMacros(recs: any[], ctx: Ctx) {
+  for (const r of recs) {
+    if (r.is_subrecipe) continue;
+    const res = computeRecipe(r.id, ctx);
+    const n = res.servingNutrition;
+    const next = res.nutritionComplete ? { calories: n.calories, protein: n.protein, carbs: n.carbs, fats: n.fats } : null;
+    if (JSON.stringify(next) !== JSON.stringify(r.public_macros ?? null)) {
+      supabase.from("recipes").update({ public_macros: next as any }).eq("id", r.id).then(() => {});
+    }
+  }
 }

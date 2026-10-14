@@ -753,11 +753,15 @@ export type Database = {
           batch_yield_unit: string
           category: string | null
           created_at: string
+          description: string | null
           id: string
+          image_url: string | null
           instructions: string | null
+          is_published: boolean
           is_subrecipe: boolean
           name: string
           packaging_cost: number
+          public_macros: Json | null
           restaurant_id: string
           selling_price: number | null
           serving_size_text: string | null
@@ -770,11 +774,15 @@ export type Database = {
           batch_yield_unit?: string
           category?: string | null
           created_at?: string
+          description?: string | null
           id?: string
+          image_url?: string | null
           instructions?: string | null
+          is_published?: boolean
           is_subrecipe?: boolean
           name: string
           packaging_cost?: number
+          public_macros?: Json | null
           restaurant_id: string
           selling_price?: number | null
           serving_size_text?: string | null
@@ -787,11 +795,15 @@ export type Database = {
           batch_yield_unit?: string
           category?: string | null
           created_at?: string
+          description?: string | null
           id?: string
+          image_url?: string | null
           instructions?: string | null
+          is_published?: boolean
           is_subrecipe?: boolean
           name?: string
           packaging_cost?: number
+          public_macros?: Json | null
           restaurant_id?: string
           selling_price?: number | null
           serving_size_text?: string | null
@@ -1086,6 +1098,17 @@ export type Database = {
         Returns: string
       }
       can_manage: { Args: { _restaurant: string }; Returns: boolean }
+      get_public_menu: {
+        Args: { _slug: string }
+        Returns: {
+          category: string
+          description: string
+          id: string
+          image_url: string
+          macros: Json
+          name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

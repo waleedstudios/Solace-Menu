@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useRestaurant, loadCostCtx } from "@/hooks/useRestaurant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, ImageUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { computeRecipe, type RecipeResult } from "@/lib/costing";
 import { money } from "@/lib/units";
@@ -17,10 +17,60 @@ const Recipes = () => {
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"menu" | "sub">("menu");
 
-  useEffect(() => {
-    if (!restaurant) return;
-    loadCostCtx(restaurant.id).then((ctx) => setRows(ctx.recipeList.map((r) => ({ r, res: computeRecipe(r.id, ctx) }))));
-  }, [restaurant?.id]);
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const reload = () => { if (restaurant) loadCostCtx(restaurant.id).then((ctx) => setRows(ctx.recipeList.map((r) => ({ r, res: computeRecipe(r.id, ctx) })))); };
+  useEffect(reload, [restaurant?.id]);
+
+  const importMenu = async (files: FileList | null) => {
+    if (!files?.length || !restaurant) return;
+    setBusy(true);
+    try {
+      const paths: string[] = [];
+      for (const f of Array.from(files)) {
+        const path = `${restaurant.id}/menus/${crypto.randomUUID()}-${f.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+        const { error } = await supabase.storage.from("documents").upload(path, f, { contentType: f.type });
+        if (error) throw error;
+        paths.push(path);
+      }
+      const { data, error } = await supabase.functions.invoke("extract-document", { body: { kind: "menu", restaurant_id: restaurant.id, paths } });
+      if (error || data?.error) throw new Error(data?.error || "Could not read the menu");
+      const items: any[] = data.data?.items || [];
+      const { data: ings } = await supabase.from("ingredients").select("id, name").eq("restaurant_id", restaurant.id);
+      const byName = new Map((ings || []).map((i) => [i.name.trim().toLowerCase(), i.id]));
+      const existing = new Set(rows.filter(({ r }) => !r.is_subrecipe).map(({ r }) => r.name.trim().toLowerCase()));
+      let added = 0;
+      for (const it of items) {
+        if (!it.name?.trim() || existing.has(it.name.trim().toLowerCase())) continue;
+        const { data: rec, error: re } = await supabase.from("recipes").insert({
+          restaurant_id: restaurant.id, name: it.name.trim(), description: it.description || null, category: it.category || null,
+          selling_price: typeof it.price === "number" ? it.price : null, is_subrecipe: false, batch_yield_unit: "each", batch_yield_qty: 1,
+        }).select("id").single();
+        if (re) throw re;
+        let pos = 0;
+        for (const raw of it.ingredients || []) {
+          const key = String(raw).trim().toLowerCase();
+          if (!key) continue;
+          let ingId = byName.get(key);
+          if (!ingId) {
+            const { data: ni } = await supabase.from("ingredients").insert({ restaurant_id: restaurant.id, name: key }).select("id").single();
+            if (!ni) continue;
+            ingId = ni.id; byName.set(key, ingId);
+          }
+          // Quantity is unknown from a menu photo: left at 0 so the recipe is flagged until grams are entered.
+          await supabase.from("recipe_lines").insert({ recipe_id: rec!.id, ingredient_id: ingId, quantity: 0, unit: "g", position: pos++ });
+        }
+        added++;
+      }
+      toast.success(`Added ${added} menu item${added === 1 ? "" : "s"}. Enter ingredient amounts to calculate macros.`);
+      reload();
+    } catch (e: any) {
+      toast.error(e.message || "Menu import failed");
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const create = async () => {
     const name = prompt(tab === "sub" ? "Sub-recipe name (e.g. Spicy mayo)" : "Recipe name");
@@ -42,7 +92,13 @@ const Recipes = () => {
           <h1 className="font-display text-4xl">Recipes</h1>
           <p className="text-muted-foreground text-sm mt-1">Menu recipes and sub-recipes (sauces, dressings, prep mixes). Visible to owners and managers.</p>
         </div>
-        <Button onClick={create}><Plus /> New {tab === "sub" ? "sub-recipe" : "recipe"}</Button>
+        <div className="flex gap-2">
+          {tab === "menu" && <>
+            <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={(e) => importMenu(e.target.files)} />
+            <Button variant="outline" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? <Loader2 className="animate-spin" /> : <ImageUp />} {busy ? "Reading menu…" : "Upload menu photo"}</Button>
+          </>}
+          <Button onClick={create}><Plus /> New {tab === "sub" ? "sub-recipe" : "recipe"}</Button>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2 items-center">
         <div className="inline-flex rounded-lg border border-border p-1 bg-card">
