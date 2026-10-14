@@ -15,6 +15,13 @@
       "when": 1792015557612,
       "tag": "0001_documents_storage_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792016458630,
+      "tag": "0002_restrict_ingredient_reads",
+      "breakpoints": true
     }
   ]
 }
