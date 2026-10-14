@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -93,12 +92,11 @@ Deno.serve(async (req) => {
     }];
     for (const p of paths.slice(0, 10)) {
       if (!String(p).startsWith(`${restaurant_id}/`)) return json({ error: "Forbidden" }, 403);
-      const { data, error } = await supabase.storage.from("documents").download(p);
-      if (error || !data) return json({ error: "Could not read file" }, 400);
-      const b64 = encodeBase64(new Uint8Array(await data.arrayBuffer()));
-      const mime = data.type || "image/jpeg";
-      const url = `data:${mime};base64,${b64}`;
-      content.push(mime === "application/pdf" ? { type: "input_file", filename: "doc.pdf", file_data: url } : { type: "input_image", image_url: url });
+      // Short-lived signed URL instead of loading the file into memory (avoids worker memory limits).
+      const { data, error } = await supabase.storage.from("documents").createSignedUrl(p, 600);
+      if (error || !data?.signedUrl) return json({ error: "Could not read file" }, 400);
+      const isPdf = String(p).toLowerCase().endsWith(".pdf");
+      content.push(isPdf ? { type: "input_file", file_url: data.signedUrl } : { type: "input_image", image_url: data.signedUrl });
     }
 
     const schema = strict(kind === "invoice" ? invoiceSchema : labelSchema);
@@ -116,7 +114,7 @@ Deno.serve(async (req) => {
     });
     if (r.status === 429) return json({ error: "AI is busy, try again in a minute." }, 429);
     if (r.status === 402) return json({ error: "AI credits exhausted. Add credits in workspace settings." }, 402);
-    if (!r.ok || !r.body) { console.error("AI error status", r.status); return json({ error: "Extraction failed" }, 500); }
+    if (!r.ok || !r.body) { console.error("AI error", r.status, (await r.text()).slice(0, 500)); return json({ error: "Extraction failed" }, 500); }
     let args = "";
     const reader = r.body.getReader();
     const dec = new TextDecoder();
