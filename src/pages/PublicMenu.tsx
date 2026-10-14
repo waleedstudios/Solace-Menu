@@ -5,7 +5,7 @@ import { MacroBadges } from "@/components/MacroBadges";
 import { totalMacros, type Ingredient, type PortionUnit, type RecipeItem } from "@/lib/macros";
 
 type Profile = { id: string; restaurant_name: string; slug: string };
-type MenuItem = { id: string; name: string; description: string | null; image_url: string | null };
+type MenuItem = { id: string; name: string; description: string | null; image_url: string | null; macros?: any };
 
 const PublicMenu = () => {
   const { slug } = useParams();
@@ -27,7 +27,9 @@ const PublicMenu = () => {
 
       const { data: m } = await supabase.from("menu_items").select("id, name, description, image_url")
         .eq("user_id", p.id).eq("is_published", true).order("created_at", { ascending: false });
-      const list = (m as MenuItem[]) || [];
+      const { data: pr } = await supabase.rpc("get_public_menu", { _slug: slug });
+      const fromRecipes = ((pr as any[]) || []).map((x) => ({ id: x.id, name: x.name, description: x.description, image_url: x.image_url, macros: x.macros }));
+      const list = [...fromRecipes, ...(((m as MenuItem[]) || []))];
       setItems(list);
 
       if (list.length) {
@@ -78,7 +80,8 @@ const PublicMenu = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {items.map((it) => {
               const recipe = recipes[it.id] || [];
-              const macros = totalMacros(recipe, ingredients, portionUnits);
+              const fromRecipe = it.macros !== undefined;
+              const macros = fromRecipe ? it.macros : totalMacros(recipe, ingredients, portionUnits);
               return (
                 <article key={it.id} className="bg-card rounded-2xl border border-border shadow-sm-soft overflow-hidden flex flex-col hover:shadow-md-soft transition-shadow animate-fade-up">
                   {it.image_url ? (
@@ -94,7 +97,7 @@ const PublicMenu = () => {
                     <h2 className="font-display text-2xl leading-tight">{it.name}</h2>
                     {it.description && <p className="text-sm text-muted-foreground leading-relaxed">{it.description}</p>}
                     <div className="mt-auto pt-2">
-                      <MacroBadges macros={macros} />
+                      {macros ? <MacroBadges macros={macros} /> : <p className="text-xs text-muted-foreground">Nutrition coming soon</p>}
                     </div>
                   </div>
                 </article>
