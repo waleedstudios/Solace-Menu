@@ -90,12 +90,8 @@ export function computeRecipe(recipeId: string, ctx: Ctx, stack: string[] = []):
         } else nutritionComplete = false;
       }
     }
-    if (cost == null || issues.some((i) => i !== "No nutrition data")) {
-      if (cost == null || issues.length) {
-        const blocking = issues.filter((i) => i !== "No nutrition data");
-        if (cost == null || blocking.length) { costComplete = false; costIssues.push(`${name}: ${blocking.join(", ") || "no cost"}`); }
-      }
-    }
+    const blocking = issues.filter((i) => i !== "No nutrition data");
+    if (cost == null || blocking.length) { costComplete = false; costIssues.push(`${name}: ${blocking.join(", ") || "no cost"}`); }
     if (cost != null) batchCost += cost;
     lines.push({ line: l, name, cost, issues });
   }
