@@ -9,6 +9,13 @@ import DashboardLayout from "./pages/dashboard/DashboardLayout";
 import MenuItems from "./pages/dashboard/MenuItems";
 import RecipeEditor from "./pages/dashboard/RecipeEditor";
 import Ingredients from "./pages/dashboard/Ingredients";
+import Overview from "./pages/dashboard/Overview";
+import Recipes from "./pages/dashboard/Recipes";
+import RecipeDetail from "./pages/dashboard/RecipeDetail";
+import Invoices from "./pages/dashboard/Invoices";
+import InvoiceReview from "./pages/dashboard/InvoiceReview";
+import Sales from "./pages/dashboard/Sales";
+import Team from "./pages/dashboard/Team";
 import Portions from "./pages/dashboard/Portions";
 import PublicMenu from "./pages/PublicMenu";
 import NotFound from "./pages/NotFound.tsx";
@@ -25,7 +32,14 @@ const App = () => (
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
-            <Route index element={<MenuItems />} />
+            <Route index element={<Overview />} />
+            <Route path="menu" element={<MenuItems />} />
+            <Route path="recipes" element={<Recipes />} />
+            <Route path="recipes/:id" element={<RecipeDetail />} />
+            <Route path="invoices" element={<Invoices />} />
+            <Route path="invoices/:id" element={<InvoiceReview />} />
+            <Route path="sales" element={<Sales />} />
+            <Route path="team" element={<Team />} />
             <Route path="items/:id" element={<RecipeEditor />} />
             <Route path="ingredients" element={<Ingredients />} />
             <Route path="portions" element={<Portions />} />

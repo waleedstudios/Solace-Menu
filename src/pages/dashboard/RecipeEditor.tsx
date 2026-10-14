@@ -47,7 +47,7 @@ const RecipeEditor = () => {
         supabase.from("portion_units").select("*").eq("user_id", user.id).order("name"),
         supabase.from("recipe_items").select("*").eq("menu_item_id", id),
       ]);
-      if (!mi || mi.user_id !== user.id) { toast.error("Not found"); navigate("/dashboard"); return; }
+      if (!mi || mi.user_id !== user.id) { toast.error("Not found"); navigate("/dashboard/menu"); return; }
       setItem(mi as MenuItem);
       setIngredients((ing as Ingredient[]) || []);
       setPortionUnits((pu as PortionUnit[]) || []);
@@ -96,7 +96,7 @@ const RecipeEditor = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <Button asChild variant="ghost" size="sm" className="-ml-3">
-        <Link to="/dashboard"><ArrowLeft /> Back to menu</Link>
+        <Link to="/dashboard/menu"><ArrowLeft /> Back to menu</Link>
       </Button>
 
       <div className="flex items-end justify-between flex-wrap gap-4">
