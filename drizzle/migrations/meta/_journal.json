@@ -8,6 +8,13 @@
       "when": 1792015445855,
       "tag": "0000_food_cost_platform",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792015557612,
+      "tag": "0001_documents_storage_policies",
+      "breakpoints": true
     }
   ]
 }
