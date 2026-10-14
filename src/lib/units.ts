@@ -21,7 +21,7 @@ export const BASE_OF: Record<Dim, Unit> = { mass: "g", volume: "ml", count: "eac
 export const isUnit = (u: unknown): u is Unit => typeof u === "string" && u in UNITS;
 export const dimOf = (u: string): Dim | null => (isUnit(u) ? UNITS[u].dim : null);
 
-export type ConvResult = { ok: true; value: number } | { ok: false; reason: string };
+export type ConvResult = { ok: true; value: number; reason?: undefined } | { ok: false; reason: string };
 
 /**
  * Convert qty of `from` into the base unit of `targetBase` (g, ml or each).

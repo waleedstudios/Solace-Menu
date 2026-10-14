@@ -44,7 +44,7 @@ export function suggestMatch(line: Pick<InvLine, "description" | "product_code" 
 }
 
 /** Cost per ingredient base unit for an invoice line, or a reason it can't be computed. */
-export function lineUnitCost(line: InvLine, ing: MatchIng): { ok: true; costPerBase: number; baseQty: number; explain: string } | { ok: false; reason: string } {
+export function lineUnitCost(line: InvLine, ing: MatchIng): { ok: true; costPerBase: number; baseQty: number; explain: string; reason?: undefined } | { ok: false; reason: string } {
   if (!isUnit(line.pack_unit) || !line.pack_size) return { ok: false, reason: "Pack size/unit missing on this line" };
   const per = line.unit_price ?? (line.line_total != null && line.quantity ? line.line_total / line.quantity : null);
   if (per == null) return { ok: false, reason: "Unit price missing" };
