@@ -53,6 +53,23 @@ const labelSchema = {
   required: ["uncertain_fields"],
 };
 
+// Strict JSON schema: every property required, nullable where optional, no extra keys.
+function strict(sc: any): any {
+  if (sc.type === "object" || (Array.isArray(sc.type) && sc.type.includes("object"))) {
+    const props: any = {};
+    const req = sc.required || [];
+    for (const [k, v] of Object.entries<any>(sc.properties)) {
+      let p = strict(v);
+      if (!req.includes(k) && typeof p.type === "string") p = { ...p, type: [p.type, "null"] };
+      if (p.enum && Array.isArray(p.type) && p.type.includes("null") && !p.enum.includes(null)) p.enum = [...p.enum, null];
+      props[k] = p;
+    }
+    return { type: "object", properties: props, required: Object.keys(props), additionalProperties: false };
+  }
+  if (sc.type === "array") return { ...sc, items: strict(sc.items) };
+  return sc;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
@@ -69,7 +86,7 @@ Deno.serve(async (req) => {
     if (!isMember) return json({ error: "Forbidden" }, 403);
 
     const content: any[] = [{
-      type: "text",
+      type: "input_text",
       text: kind === "invoice"
         ? "Extract this supplier invoice / receipt (all pages). Read only what is printed; use null for anything not visible. Never guess pack sizes. Flag any field you are unsure of. Credits/returns use negative quantities and totals."
         : "Extract this nutrition facts label. Read only printed values; use null when absent. Do not infer allergens; only copy a printed Contains statement.",
@@ -79,24 +96,44 @@ Deno.serve(async (req) => {
       const { data, error } = await supabase.storage.from("documents").download(p);
       if (error || !data) return json({ error: "Could not read file" }, 400);
       const b64 = encodeBase64(new Uint8Array(await data.arrayBuffer()));
-      content.push({ type: "image_url", image_url: { url: `data:${data.type || "image/jpeg"};base64,${b64}` } });
+      const mime = data.type || "image/jpeg";
+      const url = `data:${mime};base64,${b64}`;
+      content.push(mime === "application/pdf" ? { type: "input_file", filename: "doc.pdf", file_data: url } : { type: "input_image", image_url: url });
     }
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const schema = strict(kind === "invoice" ? invoiceSchema : labelSchema);
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
-      headers: { Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`, "Content-Type": "application/json" },
+      headers: { "Lovable-API-Key": Deno.env.get("LOVABLE_API_KEY")!, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content }],
-        tools: [{ type: "function", function: { name: "record", description: "Record extracted data", parameters: kind === "invoice" ? invoiceSchema : labelSchema } }],
-        tool_choice: { type: "function", function: { name: "record" } },
+        model: "openai/gpt-6-astra",
+        stream: true,
+        store: false,
+        reasoning: { effort: "low" },
+        input: [{ role: "user", content }],
+        text: { format: { type: "json_schema", name: "record", strict: true, schema } },
       }),
     });
     if (r.status === 429) return json({ error: "AI is busy, try again in a minute." }, 429);
     if (r.status === 402) return json({ error: "AI credits exhausted. Add credits in workspace settings." }, 402);
-    if (!r.ok) { console.error("AI error status", r.status); return json({ error: "Extraction failed" }, 500); }
-    const out = await r.json();
-    const args = out.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    if (!r.ok || !r.body) { console.error("AI error status", r.status); return json({ error: "Extraction failed" }, 500); }
+    let args = "";
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!line.startsWith("data:")) continue;
+        const d = line.slice(5).trim();
+        if (d === "[DONE]") continue;
+        try { const ev = JSON.parse(d); if (ev.type === "response.output_text.delta") args += ev.delta; } catch { /* partial */ }
+      }
+    }
     if (!args) return json({ error: "Nothing could be extracted" }, 422);
     return json({ data: JSON.parse(args) });
   } catch (_e) {
