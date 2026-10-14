@@ -9,7 +9,7 @@ describe("units", () => {
   it("never mixes weight oz and fluid oz", () => {
     expect(toBase(1, "oz", "g").ok).toBe(true);
     expect(toBase(1, "fl_oz", "g").ok).toBe(false);
-    expect(toBase(1, "fl_oz", "g", 1.03).value).toBeCloseTo(30.46, 1);
+    expect((toBase(1, "fl_oz", "g", 1.03) as any).value).toBeCloseTo(30.46, 1);
     expect(toBase(1, "each", "g", 1).ok).toBe(false);
   });
   it("handles a case of 4 x 1 gal", () => {
