@@ -20,6 +20,7 @@ const flagCls = (on: boolean) => (on ? "border-amber-500 ring-1 ring-amber-500/4
 
 const InvoiceReview = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { restaurant, canManage, locations } = useRestaurant();
   const [inv, setInv] = useState<any>(null);
@@ -104,6 +105,17 @@ const InvoiceReview = () => {
     setBusy(false); load();
   };
 
+  const remove = async () => {
+    if (!confirm("Delete this invoice and its uploaded files? You can upload it again afterwards.")) return;
+    setBusy(true);
+    await supabase.from("invoice_lines").delete().eq("invoice_id", inv.id);
+    const { error } = await supabase.from("invoices").delete().eq("id", inv.id);
+    if (error) { toast.error(error.message); setBusy(false); return; }
+    if (inv.file_paths?.length) await supabase.storage.from("documents").remove(inv.file_paths);
+    toast.success("Invoice deleted");
+    navigate("/dashboard/invoices");
+  };
+
   if (!inv) return <p className="text-muted-foreground">Loading…</p>;
   const ingName = (iid: string | null) => ings.find((i) => i.id === iid)?.name;
 
@@ -116,6 +128,7 @@ const InvoiceReview = () => {
           <div className="flex gap-2 mt-2"><Badge>{STATUS_LABEL[inv.status]}</Badge><Badge variant="outline">{DOC_LABEL[inv.doc_type]}</Badge></div>
         </div>
         <div className="flex gap-2">
+          {canManage && !locked && <Button variant="outline" onClick={remove} disabled={busy}><Trash2 /> Delete</Button>}
           {!locked && <Button variant="outline" onClick={rerun} disabled={busy}><RefreshCw /> Re-read</Button>}
           {canManage && !locked && <Button onClick={approve} disabled={busy || inv.status !== "review"}>{busy ? <Loader2 className="animate-spin" /> : <CheckCircle2 />} Approve & update prices</Button>}
         </div>
