@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRestaurant, loadCostCtx } from "@/hooks/useRestaurant";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { approveInvoice, lineUnitCost, totalsCheck, STATUS_LABEL, DOC_LABEL, type InvLine, type MatchIng, type PriceChange } from "@/lib/invoices";
 import { runExtraction } from "./Invoices";
