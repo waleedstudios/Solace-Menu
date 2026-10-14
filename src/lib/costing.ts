@@ -46,6 +46,7 @@ export function computeRecipe(recipeId: string, ctx: Ctx, stack: string[] = []):
     const issues: string[] = [];
     let cost: number | null = null;
     let name = "?";
+    if (!(Number(l.quantity) > 0)) issues.push("Quantity needed");
     if (l.ingredient_id) {
       const ing = ctx.ingredients.get(l.ingredient_id);
       if (!ing) { issues.push("Ingredient missing"); }
