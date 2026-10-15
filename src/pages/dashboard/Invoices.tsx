@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useWebMCP } from "use-webmcp-tool";
+import { runWebMCPTool } from "@/lib/webmcp-telemetry";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -105,6 +107,26 @@ const Invoices = () => {
     for (const r of filtered) { const k = r.vendor_name || "Unknown vendor"; m.set(k, [...(m.get(k) || []), r]); }
     return [...m.entries()];
   }, [filtered]);
+
+  useWebMCP({
+    name: "list_invoices",
+    description: "List the invoices currently shown on this page, respecting the search and filters.",
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    execute: () => runWebMCPTool("list_invoices", () =>
+      filtered.length === 0 ? "No invoices shown."
+        : filtered.slice(0, 100).map((r) => `${r.id}: ${r.invoice_date ?? "no date"} ${r.vendor_name ?? "Unknown vendor"} #${r.invoice_number ?? "?"} total ${r.total ?? "?"} (${r.status})`).join("\n")),
+  });
+
+  useWebMCP({
+    name: "search_invoices",
+    description: "Type a search into the invoice search box (vendor, number, total or line item). Empty string clears it.",
+    inputSchema: { type: "object", properties: { query: { type: "string", description: "Search text." } }, required: ["query"] },
+    execute: ({ query }: { query: string }) => runWebMCPTool("search_invoices", () => {
+      if (typeof query !== "string") throw new Error("query must be text.");
+      setQ(query);
+      return query ? `Searching invoices for "${query}".` : "Search cleared.";
+    }),
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">

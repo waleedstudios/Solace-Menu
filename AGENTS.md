@@ -6,3 +6,4 @@
 - Ingredient `current_cost` is derived only from approved `price_history` (latest by invoice date) via `refreshCurrentCost`; why: uploads must never silently change costs and older invoices must not overwrite newer prices.
 - Invoice/label reading goes through the `extract-document` edge function; recipes are never sent to AI; why: privacy requirement.
 - Legacy `menu_items`/`recipe_items`/`portion_units` still power the public menu; new costing uses `recipes`/`recipe_lines`.
+- MCP server lives in `src/lib/mcp/` (one tool per file, OAuth via the app sign-in, read-only, never returns recipe lines); why: external assistants act as the signed-in user under RLS and recipes stay private.
