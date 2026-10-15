@@ -1,3 +1,4 @@
 - [Migration scope](migration-scope.md) — the user selected the full app port, not a frontend-only copy that retains the old backend.
 - [Business onboarding](business-onboarding.md) — collect actual business details after sign-in; never infer the business name from a person's name.
 - [Branding requirements](branding-requirements.md) — use the supplied SM/leaf logo and matching wordmark; account for scaled image previews when cropping.
+- [Recipe-to-menu behavior](recipe-menu-behavior.md) — menu items added under Recipes should automatically create and synchronize their public menu entries.
