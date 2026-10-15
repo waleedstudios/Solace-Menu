@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { oauthReturnPath } from "@/lib/oauth-return-path";
 
 const signupSchema = z.object({
   restaurant_name: z.string().trim().min(2, "Restaurant name is required").max(80),
@@ -28,10 +29,13 @@ const Auth = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ restaurant_name: "", email: "", password: "" });
+  const rawNext = params.get("next");
+  const next = rawNext ? oauthReturnPath(rawNext) : "/dashboard";
+  const dest = next === "/" ? "/dashboard" : next;
 
   useEffect(() => {
-    if (!loading && user) navigate("/dashboard", { replace: true });
-  }, [user, loading, navigate]);
+    if (!loading && user) navigate(dest, { replace: true });
+  }, [user, loading, navigate, dest]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +48,7 @@ const Auth = () => {
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: new URL(dest, window.location.origin).href,
             data: { restaurant_name: parsed.data.restaurant_name },
           },
         });
