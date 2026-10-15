@@ -30,6 +30,8 @@ Solace helps restaurants manage ingredient nutrition and costs, build recipes, p
 
 - `artifacts/solace/src/` — imported pages, components, styles, and assets
 - `artifacts/solace/src/lib/data.ts` — typed HTTP adapter for the imported query flows
+- `artifacts/solace/src/pages/Onboarding.tsx` — required first-login business setup
+- `artifacts/api-server/src/lib/onboarding.ts` — transactional, idempotent setup that preserves existing restaurant IDs and records
 - `artifacts/api-server/src/routes/` — data queries, account provisioning, document storage, extraction
 - `artifacts/api-server/src/lib/dataPolicy.ts` — restaurant and role authorization
 - `lib/db/src/schema/` — normalized PostgreSQL schema

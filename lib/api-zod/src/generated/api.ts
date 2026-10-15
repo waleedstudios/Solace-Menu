@@ -22,7 +22,50 @@ export const HealthCheckResponse = zod.object({
  */
 export const GetCurrentUserResponse = zod.object({
   "id": zod.string().uuid(),
-  "email": zod.string()
+  "email": zod.string(),
+  "full_name": zod.string().nullable(),
+  "onboarding_complete": zod.boolean(),
+  "business_name": zod.string().nullable(),
+  "business_address": zod.string().nullable(),
+  "business_phone": zod.string().nullable()
+})
+
+
+/**
+ * @summary Save the signed-in user's business details before dashboard access
+ */
+export const completeBusinessOnboardingBodyFullNameMin = 2;
+export const completeBusinessOnboardingBodyFullNameMax = 120;
+
+export const completeBusinessOnboardingBodyEmailMax = 254;
+
+export const completeBusinessOnboardingBodyBusinessNameMin = 2;
+export const completeBusinessOnboardingBodyBusinessNameMax = 120;
+
+export const completeBusinessOnboardingBodyBusinessAddressMin = 5;
+export const completeBusinessOnboardingBodyBusinessAddressMax = 500;
+
+export const completeBusinessOnboardingBodyBusinessPhoneMin = 7;
+export const completeBusinessOnboardingBodyBusinessPhoneMax = 40;
+
+
+
+export const CompleteBusinessOnboardingBody = zod.object({
+  "full_name": zod.string().min(completeBusinessOnboardingBodyFullNameMin).max(completeBusinessOnboardingBodyFullNameMax),
+  "email": zod.string().email().max(completeBusinessOnboardingBodyEmailMax),
+  "business_name": zod.string().min(completeBusinessOnboardingBodyBusinessNameMin).max(completeBusinessOnboardingBodyBusinessNameMax),
+  "business_address": zod.string().min(completeBusinessOnboardingBodyBusinessAddressMin).max(completeBusinessOnboardingBodyBusinessAddressMax),
+  "business_phone": zod.string().min(completeBusinessOnboardingBodyBusinessPhoneMin).max(completeBusinessOnboardingBodyBusinessPhoneMax)
+})
+
+export const CompleteBusinessOnboardingResponse = zod.object({
+  "id": zod.string().uuid(),
+  "email": zod.string(),
+  "full_name": zod.string().nullable(),
+  "onboarding_complete": zod.boolean(),
+  "business_name": zod.string().nullable(),
+  "business_address": zod.string().nullable(),
+  "business_phone": zod.string().nullable()
 })
 
 

@@ -5,7 +5,7 @@ import type { Request } from "express";
 export class HttpError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
-export type LocalUser = { id: string; email: string };
+export type LocalUser = { id: string; email: string; full_name: string | null; onboarding_complete: boolean };
 
 const starters: [string, number, number, number, number][] = [
   ["Chicken Breast", 165, 31, 0, 3.6], ["Salmon", 208, 20, 0, 13],
@@ -25,36 +25,39 @@ const starters: [string, number, number, number, number][] = [
 
 // Keep the app's UUID identity separate from Clerk's provider ID. This preserves
 // the imported data model and leaves a stable identity for a future data export.
-export async function localUser(req: Request, required = true): Promise<LocalUser | null> {
+export async function localUser(req: Request, required = true, allowIncomplete = false): Promise<LocalUser | null> {
   const clerkId = getAuth(req).userId;
   if (!clerkId) {
     if (required) throw new HttpError(401, "Please sign in.");
     return null;
   }
-  const existing = await pool.query("SELECT id, email FROM auth_users WHERE clerk_id = $1", [clerkId]);
+  const user = await findOrCreateIdentity(clerkId);
+  if (!user.onboarding_complete && !allowIncomplete) {
+    if (!required) return null;
+    throw new HttpError(403, "Complete your business details before using the dashboard.");
+  }
+  return user;
+}
+
+async function findOrCreateIdentity(clerkId: string): Promise<LocalUser> {
+  const identityFields = "id, email, full_name, onboarding_completed_at IS NOT NULL AS onboarding_complete";
+  const existing = await pool.query(`SELECT ${identityFields} FROM auth_users WHERE clerk_id = $1`, [clerkId]);
   if (existing.rows[0]) return existing.rows[0];
 
   const clerkUser = await clerkClient.users.getUser(clerkId);
   const email = clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? clerkUser.emailAddresses[0]?.emailAddress;
   if (!email) throw new HttpError(400, "An email address is required.");
-  const metadataName = clerkUser.unsafeMetadata.restaurant_name;
-  const name = typeof metadataName === "string" && metadataName.trim().length >= 2
-    ? metadataName.trim().slice(0, 80) : (clerkUser.firstName ? `${clerkUser.firstName}'s Restaurant` : "My Restaurant");
+  const fullName = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim().slice(0, 120) || null;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [clerkId]);
-    const found = await client.query("SELECT id, email FROM auth_users WHERE clerk_id = $1", [clerkId]);
+    const found = await client.query(`SELECT ${identityFields} FROM auth_users WHERE clerk_id = $1`, [clerkId]);
     if (found.rows[0]) { await client.query("COMMIT"); return found.rows[0]; }
-    const { rows: [user] } = await client.query("INSERT INTO auth_users (clerk_id, email) VALUES ($1, $2) RETURNING id, email", [clerkId, email]);
-    const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "restaurant";
-    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`solace-slug:${base}`]);
-    let slug = base;
-    for (let i = 1; (await client.query("SELECT 1 FROM profiles WHERE slug = $1", [slug])).rowCount; i++) slug = `${base}-${i}`;
-    await client.query("INSERT INTO profiles (id, restaurant_name, slug, email) VALUES ($1, $2, $3, $4)", [user.id, name, slug, email]);
-    const { rows: [restaurant] } = await client.query("INSERT INTO restaurants (name, owner_id) VALUES ($1, $2) RETURNING id", [name, user.id]);
-    await client.query("INSERT INTO restaurant_members (restaurant_id, user_id, role, email) VALUES ($1, $2, 'owner', $3)", [restaurant.id, user.id, email]);
-    await client.query("INSERT INTO locations (restaurant_id, name) VALUES ($1, 'Main location')", [restaurant.id]);
+    const { rows: [user] } = await client.query(`INSERT INTO auth_users (clerk_id, email, full_name) VALUES ($1, $2, $3) RETURNING ${identityFields}`, [clerkId, email, fullName]);
+    // Signing in establishes identity only. A business is created only after
+    // its owner explicitly supplies and saves the business details.
+    await client.query("INSERT INTO profiles (id, restaurant_name, slug, email) VALUES ($1, '', $2, $3)", [user.id, `pending-${user.id}`, email]);
     await client.query("SELECT pg_advisory_xact_lock(734201)");
     for (const [n, calories, protein, carbs, fats] of starters) {
       await client.query(`INSERT INTO ingredients (name, calories_per_100g, protein_per_100g, carbs_per_100g, fats_per_100g, nutrition_source)

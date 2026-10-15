@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import logo from "@/assets/solace-logo.png";
+import brandMark from "@/assets/solace-brand-mark.png";
+import brandWordmark from "@/assets/solace-brand-wordmark.png";
 
 export const Logo = ({
   className = "",
@@ -11,20 +12,25 @@ export const Logo = ({
   size?: number;
   withWordmark?: boolean;
   invert?: boolean;
-}) => (
-  <Link to="/" className={`inline-flex items-center gap-2 ${className}`}>
-    <img
-      src={logo}
-      alt="Solace Menu"
-      width={size}
-      height={size}
-      style={{ width: size, height: size, mixBlendMode: invert ? "screen" : "multiply" }}
-      className="object-contain"
-    />
-    {withWordmark && (
-      <span className={`font-display text-2xl leading-none tracking-tight ${invert ? "text-background" : ""}`}>
-        Solace Menu
-      </span>
-    )}
-  </Link>
-);
+}) => {
+  // Artwork is dark on transparent; invert flips it to light for dark surfaces.
+  const filter = invert ? "brightness(0) invert(1)" : undefined;
+  return (
+    <Link to="/" aria-label="Solace Menu" className={`inline-flex shrink-0 items-center gap-2 ${className}`}>
+      <img
+        src={brandMark}
+        alt={withWordmark ? "" : "Solace Menu"}
+        style={{ height: size, width: "auto", filter }}
+        className="object-contain dark:[filter:brightness(0)_invert(1)]"
+      />
+      {withWordmark && (
+        <img
+          src={brandWordmark}
+          alt="Solace Menu"
+          style={{ height: Math.max(10, Math.round(size * 0.35)), width: "auto", filter }}
+          className="object-contain max-w-[108px] sm:max-w-none dark:[filter:brightness(0)_invert(1)]"
+        />
+      )}
+    </Link>
+  );
+};

@@ -37,6 +37,27 @@ paths:
                 $ref: "#/components/schemas/LocalUser"
         "401":
           description: Not signed in
+  /onboarding:
+    post:
+      operationId: completeBusinessOnboarding
+      summary: Save the signed-in user's business details before dashboard access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessDetails"
+      responses:
+        "200":
+          description: Business setup completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalUser"
+        "400":
+          description: Invalid business details
+        "401":
+          description: Not signed in
   /data/query:
     post:
       operationId: queryData
@@ -215,10 +236,24 @@ components:
         - status
     LocalUser:
       type: object
-      required: [id, email]
+      required: [id, email, full_name, onboarding_complete, business_name, business_address, business_phone]
       properties:
         id: { type: string, format: uuid }
         email: { type: string }
+        full_name: { type: string, nullable: true }
+        onboarding_complete: { type: boolean }
+        business_name: { type: string, nullable: true }
+        business_address: { type: string, nullable: true }
+        business_phone: { type: string, nullable: true }
+    BusinessDetails:
+      type: object
+      required: [full_name, email, business_name, business_address, business_phone]
+      properties:
+        full_name: { type: string, minLength: 2, maxLength: 120 }
+        email: { type: string, format: email, maxLength: 254 }
+        business_name: { type: string, minLength: 2, maxLength: 120 }
+        business_address: { type: string, minLength: 5, maxLength: 500 }
+        business_phone: { type: string, minLength: 7, maxLength: 40 }
     DataRequest:
       type: object
       required: [table, operation]

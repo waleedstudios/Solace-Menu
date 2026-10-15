@@ -4,6 +4,8 @@ export const authUsers = pgTable("auth_users", {
   id: uuid("id").defaultRandom().primaryKey(),
   clerk_id: text("clerk_id").notNull().unique(),
   email: text("email").notNull(),
+  full_name: text("full_name"),
+  onboarding_completed_at: timestamp("onboarding_completed_at", { withTimezone: true }),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -19,6 +21,8 @@ export const profiles = pgTable("profiles", {
 export const restaurants = pgTable("restaurants", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
+  address: text("address"),
+  phone: text("phone"),
   owner_id: uuid("owner_id").notNull().references(() => authUsers.id),
   price_alert_threshold_pct: doublePrecision("price_alert_threshold_pct").default(5).notNull(),
   invoice_retention_days: integer("invoice_retention_days"),

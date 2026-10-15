@@ -84,9 +84,13 @@ const Shell = () => {
 const DashboardLayout = () => {
   const { user, loading, error } = useAuth();
   const navigate = useNavigate();
-  useEffect(() => { if (!loading && !user && !error) navigate("/auth", { replace: true }); }, [user, loading, error, navigate]);
+  useEffect(() => {
+    if (loading || error) return;
+    if (!user) navigate("/auth", { replace: true });
+    else if (!user.onboarding_complete) navigate("/onboarding", { replace: true });
+  }, [user, loading, error, navigate]);
   if (error) return <div className="min-h-screen flex flex-col gap-3 items-center justify-center text-destructive"><p role="alert">{error}</p><button className="underline" onClick={() => window.location.reload()}>Retry</button></div>;
-  if (loading || !user) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+  if (loading || !user || !user.onboarding_complete) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
   return <RestaurantProvider><Shell /></RestaurantProvider>;
 };
 

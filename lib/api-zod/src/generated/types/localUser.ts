@@ -9,4 +9,9 @@
 export interface LocalUser {
   id: string;
   email: string;
+  full_name: string | null;
+  onboarding_complete: boolean;
+  business_name: string | null;
+  business_address: string | null;
+  business_phone: string | null;
 }

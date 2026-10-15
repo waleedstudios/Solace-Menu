@@ -12,6 +12,36 @@ export interface HealthStatus {
 export interface LocalUser {
   id: string;
   email: string;
+  full_name: string | null;
+  onboarding_complete: boolean;
+  business_name: string | null;
+  business_address: string | null;
+  business_phone: string | null;
+}
+
+export interface BusinessDetails {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  full_name: string;
+  /** @maxLength 254 */
+  email: string;
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  business_name: string;
+  /**
+     * @minLength 5
+     * @maxLength 500
+     */
+  business_address: string;
+  /**
+     * @minLength 7
+     * @maxLength 40
+     */
+  business_phone: string;
 }
 
 export type DataRequestTable = typeof DataRequestTable[keyof typeof DataRequestTable];

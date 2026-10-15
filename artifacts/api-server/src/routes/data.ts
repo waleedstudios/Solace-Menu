@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { pool } from "@workspace/db";
-import { QueryDataBody, CallDataFunctionBody, GetCurrentUserResponse } from "@workspace/api-zod";
+import { QueryDataBody, CallDataFunctionBody, GetCurrentUserResponse, CompleteBusinessOnboardingBody, CompleteBusinessOnboardingResponse } from "@workspace/api-zod";
+import { accountView, completeBusinessSetup } from "../lib/onboarding";
 import { localUser, authorizeRestaurant, memberRole, HttpError } from "../lib/auth";
 import { columnsFor, isTable, type TableName } from "../lib/dataTables";
 import { accessClause, validatePayload } from "../lib/dataPolicy";
@@ -10,7 +11,22 @@ const quote = (s: string) => `"${s}"`;
 const publicNutrition = new Set(["id", "name", "calories_per_100g", "protein_per_100g", "carbs_per_100g", "fats_per_100g"]);
 
 router.get("/me", async (req, res): Promise<void> => {
-  res.json(GetCurrentUserResponse.parse(await localUser(req)));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(GetCurrentUserResponse.parse(await accountView((await localUser(req, true, true))!)));
+});
+
+router.post("/onboarding", async (req, res): Promise<void> => {
+  const user = (await localUser(req, true, true))!;
+  const fields = ["full_name", "email", "business_name", "business_address", "business_phone"];
+  const normalized = Object.fromEntries(fields.map((field) => [field, typeof req.body?.[field] === "string" ? req.body[field].trim() : req.body?.[field]]));
+  const parsed = CompleteBusinessOnboardingBody.safeParse(normalized);
+  if (!parsed.success) throw new HttpError(400, "Enter your name, verified email, business name, full store address, and phone number.");
+  if (parsed.data.email.toLowerCase() !== user.email.toLowerCase()) throw new HttpError(400, "Use the verified email address on your sign-in account.");
+  const digits = parsed.data.business_phone.replace(/\D/g, "");
+  if (digits.length < 7 || digits.length > 15 || !/^[+()\d\s.-]+$/.test(parsed.data.business_phone)) throw new HttpError(400, "Enter a valid business phone number, including its country code.");
+  await completeBusinessSetup(user, parsed.data);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(CompleteBusinessOnboardingResponse.parse(await accountView((await localUser(req, true, true))!)));
 });
 
 function projection(table: TableName, rows: any[], selection = "*", userId: string | null = null): Promise<any[]> {

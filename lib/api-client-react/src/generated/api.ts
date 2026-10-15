@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BusinessDetails,
   DataRequest,
   DataResult,
   DocumentInput,
@@ -215,6 +216,94 @@ export function useGetCurrentUser<TData = Awaited<ReturnType<typeof getCurrentUs
 
 
 
+
+export const getCompleteBusinessOnboardingUrl = () => {
+
+
+
+
+  return `/api/onboarding`
+}
+
+/**
+ * @summary Save the signed-in user's business details before dashboard access
+ */
+export const completeBusinessOnboarding = async (businessDetails: BusinessDetails, options?: Parameters<typeof customFetch>[1]): Promise<LocalUser> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<LocalUser>(getCompleteBusinessOnboardingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(businessDetails)
+  }
+);}
+
+
+
+
+
+export const getCompleteBusinessOnboardingMutationKey = () => ['completeBusinessOnboarding'] as const;
+
+export const getCompleteBusinessOnboardingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeBusinessOnboarding>>, TError,CompleteBusinessOnboardingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeBusinessOnboarding>>, TError,CompleteBusinessOnboardingMutationVariables, TContext> => {
+
+const mutationKey = getCompleteBusinessOnboardingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeBusinessOnboarding>>, CompleteBusinessOnboardingMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  completeBusinessOnboarding(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteBusinessOnboardingMutationResult = NonNullable<Awaited<ReturnType<typeof completeBusinessOnboarding>>>
+    export type CompleteBusinessOnboardingMutationBody = BodyType<BusinessDetails>
+    export type CompleteBusinessOnboardingMutationError = ErrorType<void>
+    export type CompleteBusinessOnboardingMutationVariables = {data: BodyType<BusinessDetails>}
+
+    /**
+ * @summary Save the signed-in user's business details before dashboard access
+ */
+export const useCompleteBusinessOnboarding = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeBusinessOnboarding>>, TError,CompleteBusinessOnboardingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeBusinessOnboarding>>,
+        TError,
+        CompleteBusinessOnboardingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCompleteBusinessOnboardingMutationOptions(options));
+    }
 
 export const getQueryDataUrl = () => {
 

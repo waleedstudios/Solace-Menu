@@ -21,3 +21,7 @@ timeoutMs = 20000
 
 [objectStorage]
 defaultBucketID = "replit-objstore-e3fe3061-61f9-47d1-b03a-ea6e2a80db49"
+
+[nix]
+channel = "stable-25_05"
+packages = ["freetype", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "tcl", "tk", "zlib"]

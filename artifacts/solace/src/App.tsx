@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
 import MenuItems from "./pages/dashboard/MenuItems";
 import RecipeEditor from "./pages/dashboard/RecipeEditor";
@@ -63,7 +64,7 @@ function AuthProviders({ children }: { children: ReactNode }) {
 
 function Home() {
   const { user } = useAuth();
-  return user ? <Navigate to="/dashboard" replace /> : <Landing />;
+  return user ? <Navigate to={user.onboarding_complete ? "/dashboard" : "/onboarding"} replace /> : <Landing />;
 }
 
 const App = () => (
@@ -78,6 +79,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/sign-in/*" element={<Auth />} />
           <Route path="/sign-up/*" element={<Auth />} />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Overview />} />
             <Route path="menu" element={<MenuItems />} />
