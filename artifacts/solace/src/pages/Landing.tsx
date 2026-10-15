@@ -230,7 +230,7 @@ const Landing = () => {
             <div className="pointer-events-none absolute left-[15%] right-[15%] top-12 hidden h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent md:block" />
             {[
               { n: "01", title: "Upload your recipes", desc: "Paste, import, or build recipes ingredient by ingredient. Photos optional." },
-              { n: "02", title: "AI calculates macros", desc: "Solace identifies every ingredient, scales portions, and verifies the macros." },
+              { n: "02", title: "Solace calculates macros", desc: "Solace identifies every ingredient, scales portions, and verifies the macros." },
               { n: "03", title: "Publish instantly", desc: "Share a QR code or embed your menu. Updates push live in seconds." },
             ].map((s, i) => (
               <div key={s.n} className="relative rounded-3xl border border-border bg-card p-8 text-center shadow-sm-soft">
