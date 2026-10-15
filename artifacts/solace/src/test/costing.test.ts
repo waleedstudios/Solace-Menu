@@ -56,6 +56,34 @@ describe("nested recipe costing", () => {
   it("blocks volume line on a weight ingredient without density", () => {
     const c = { ...ctx, lines: [{ id: "x", recipe_id: "roll", ingredient_id: "mayo", sub_recipe_id: null, quantity: 1, unit: "fl_oz" }] };
     expect(computeRecipe("roll", c).costComplete).toBe(false);
+    expect(computeRecipe("roll", c).nutritionComplete).toBe(false);
+  });
+  it("marks zero quantity as incomplete even when ingredient nutrients exist", () => {
+    const c = { ...ctx, lines: [{ ...ctx.lines[0], recipe_id: "roll", quantity: 0 }] };
+    expect(computeRecipe("roll", c).nutritionComplete).toBe(false);
+  });
+  it("marks missing ingredient and sub-recipe references as incomplete", () => {
+    expect(computeRecipe("roll", { ...ctx, ingredients: new Map(), lines: [ctx.lines[2]] }).nutritionComplete).toBe(false);
+    expect(computeRecipe("roll", { ...ctx, recipes: new Map([["roll", ctx.recipes.get("roll")!]]), lines: [ctx.lines[3]] }).nutritionComplete).toBe(false);
+  });
+  it("does not mark circular sub-recipes or invalid yields as complete", () => {
+    const cycle = { ...ctx, lines: [{ ...ctx.lines[3], recipe_id: "sauce", sub_recipe_id: "sauce" }] };
+    expect(computeRecipe("sauce", cycle).nutritionComplete).toBe(false);
+    const invalid = { ...ctx, recipes: new Map(ctx.recipes).set("sauce", { ...ctx.recipes.get("sauce")!, batch_yield_qty: 0 }) };
+    expect(computeRecipe("roll", invalid).nutritionComplete).toBe(false);
+  });
+  it("uses current nested nutrition and serving amounts rather than a cached snapshot", () => {
+    const first = computeRecipe("roll", ctx);
+    const changed = { ...ctx, ingredients: new Map(ctx.ingredients).set("mayo", ing({ ...ctx.ingredients.get("mayo"), calories_per_100g: 900 })), recipes: new Map(ctx.recipes).set("roll", { ...ctx.recipes.get("roll")!, servings_per_batch: 2 }) };
+    expect(computeRecipe("roll", changed).servingNutrition.calories).not.toEqual(first.servingNutrition.calories);
+    expect(computeRecipe("roll", changed).nutritionComplete).toBe(true);
+  });
+  it("requires a valid servings count but permits legitimate zero-calorie nutrition", () => {
+    const c = { ...ctx, recipes: new Map(ctx.recipes).set("roll", { ...ctx.recipes.get("roll")!, servings_per_batch: 0 }) };
+    expect(computeRecipe("roll", c).nutritionComplete).toBe(false);
+    const zero = { ...ctx, lines: [{ ...ctx.lines[1], recipe_id: "roll" }] };
+    expect(computeRecipe("roll", zero).nutritionComplete).toBe(true);
+    expect(computeRecipe("roll", zero).servingNutrition.calories).toBe(0);
   });
 });
 

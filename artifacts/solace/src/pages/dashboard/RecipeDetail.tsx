@@ -8,17 +8,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, History, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, History, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { computeRecipe, type Ctx } from "@/lib/costing";
 import { UNIT_LIST, UNITS, money } from "@/lib/units";
+import { useQueryClient } from "@tanstack/react-query";
+import { RecipeLineAmount } from "@/components/RecipeLineAmount";
+import { refreshMenus } from "@/lib/menu-cache";
 
 const n = (v: any) => (String(v ?? "").trim() === "" ? null : Number(v));
 
 const RecipeDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
-  const { restaurant } = useRestaurant();
+  const { restaurant, canManage } = useRestaurant();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [ctx, setCtx] = useState<(Ctx & { recipeList: any[]; ingredientList: any[] }) | null>(null);
   const [r, setR] = useState<any>(null);
@@ -26,11 +30,12 @@ const RecipeDetail = () => {
   const [add, setAdd] = useState({ ref: "", quantity: "", unit: "g" });
   const [showHist, setShowHist] = useState(false);
 
-  const load = async () => {
+  const load = async (keepDraft = false) => {
     if (!restaurant || !id) return;
     const c = await loadCostCtx(restaurant.id);
     setCtx(c);
-    setR(c.recipeList.find((x) => x.id === id) || null);
+    const fresh = c.recipeList.find((x) => x.id === id) || null;
+    setR((prev: any) => (keepDraft && prev && fresh ? { ...prev, version: fresh.version, updated_at: fresh.updated_at } : fresh));
     const { data } = await supabase.from("recipe_versions").select("*").eq("recipe_id", id).order("version", { ascending: false });
     setVersions(data || []);
   };
@@ -40,10 +45,12 @@ const RecipeDetail = () => {
   const res = useMemo(() => (liveCtx && r ? computeRecipe(r.id, liveCtx) : null), [liveCtx, r]);
   if (!ctx || !r || !res) return <p className="text-muted-foreground">Loading…</p>;
 
+  const savedRecipe = ctx.recipeList.find(recipe => recipe.id === r.id)!;
+  const savedCost = computeRecipe(r.id, ctx);
   const snapshot = (lines = ctx.lines.filter((l) => l.recipe_id === r.id)) => ({
-    recipe: { name: r.name, category: r.category, batch_yield_qty: r.batch_yield_qty, batch_yield_unit: r.batch_yield_unit, servings_per_batch: r.servings_per_batch, packaging_cost: r.packaging_cost, selling_price: r.selling_price },
+    recipe: { name: savedRecipe.name, category: savedRecipe.category, description: savedRecipe.description, image_url: savedRecipe.image_url, batch_yield_qty: savedRecipe.batch_yield_qty, batch_yield_unit: savedRecipe.batch_yield_unit, servings_per_batch: savedRecipe.servings_per_batch, serving_size_text: savedRecipe.serving_size_text, packaging_cost: savedRecipe.packaging_cost, selling_price: savedRecipe.selling_price, instructions: savedRecipe.instructions },
     lines: lines.map((l) => ({ ingredient_id: l.ingredient_id, sub_recipe_id: l.sub_recipe_id, quantity: l.quantity, unit: l.unit })),
-    cost: { total_per_item: res.totalPerItem, complete: res.costComplete, method: "latest approved purchase by invoice date" },
+    cost: { total_per_item: savedCost.totalPerItem, complete: savedCost.costComplete, method: "latest approved purchase by invoice date" },
   });
   const bump = async () => {
     await supabase.from("recipe_versions").insert({ recipe_id: r.id, restaurant_id: r.restaurant_id, version: r.version, snapshot: snapshot() as any, created_by: user?.id });
@@ -51,17 +58,20 @@ const RecipeDetail = () => {
   };
 
   const saveRecipe = async () => {
+    if (!canManage) return;
     const version = await bump();
     const { error } = await supabase.from("recipes").update({
       name: r.name, category: r.category || null, batch_yield_qty: n(r.batch_yield_qty) ?? 1, batch_yield_unit: r.batch_yield_unit,
       servings_per_batch: n(r.servings_per_batch) ?? 1, serving_size_text: r.serving_size_text || null, packaging_cost: n(r.packaging_cost) ?? 0,
-      selling_price: n(r.selling_price), instructions: r.instructions || null, version,
+      selling_price: n(r.selling_price), description: r.description?.trim() || null, image_url: r.image_url?.trim() || null, instructions: r.instructions || null, version,
     }).eq("id", r.id);
     if (error) return toast.error(error.message);
+    refreshMenus(queryClient, restaurant.id);
     toast.success(`Saved as version ${version}`); load();
   };
 
   const addLine = async () => {
+    if (!canManage) return;
     if (!add.ref || !(Number(add.quantity) > 0)) return toast.error("Pick an ingredient and enter a quantity");
     const [kind, refId] = add.ref.split(":");
     if (kind === "r" && refId === r.id) return toast.error("A recipe can't contain itself");
@@ -70,21 +80,48 @@ const RecipeDetail = () => {
     if (error) return toast.error(error.message);
     const version = await bump();
     await supabase.from("recipes").update({ version }).eq("id", r.id);
+    refreshMenus(queryClient, restaurant.id);
     setAdd({ ref: "", quantity: "", unit: "g" }); load();
   };
   const removeLine = async (lid: string) => {
-    await supabase.from("recipe_lines").delete().eq("id", lid);
+    if (!canManage) return;
+    const { error } = await supabase.from("recipe_lines").delete().eq("id", lid);
+    if (error) return toast.error(error.message);
+    refreshMenus(queryClient, restaurant.id);
     const version = await bump(); await supabase.from("recipes").update({ version }).eq("id", r.id); load();
   };
+  const saveAmount = async (lid: string, quantity: number, unit: string): Promise<string | null> => {
+    if (!canManage) return "You don't have permission to edit this recipe";
+    const { error } = await supabase.from("recipe_lines").update({ quantity, unit }).eq("id", lid);
+    if (error) return error.message;
+    const version = await bump();
+    const { error: ve } = await supabase.from("recipes").update({ version }).eq("id", r.id);
+    if (ve) return ve.message;
+    refreshMenus(queryClient, restaurant.id);
+    toast.success("Amount saved");
+    await load(true);
+    return null;
+  };
+  const togglePublished = async () => {
+    if (!canManage) return;
+    const next = r.is_published === false;
+    const { error } = await supabase.from("recipes").update({ is_published: next }).eq("id", r.id);
+    if (error) return toast.error(error.message);
+    setR({ ...r, is_published: next });
+    refreshMenus(queryClient, restaurant.id);
+    toast.success(next ? "Shown on public menu" : "Hidden from public menu");
+  };
   const del = async () => {
+    if (!canManage) return;
     if (!confirm("Delete this recipe?")) return;
     const { error } = await supabase.from("recipes").delete().eq("id", r.id);
     if (error) return toast.error("This is used as a sub-recipe elsewhere — remove it there first.");
+    refreshMenus(queryClient, restaurant.id);
     navigate("/dashboard/recipes");
   };
 
   const F = (k: string, label: string, props: any = {}) => (
-    <div className="space-y-1"><Label className="text-xs">{label}</Label><Input value={r[k] ?? ""} onChange={(e) => setR({ ...r, [k]: e.target.value })} {...props} /></div>
+    <div className="space-y-1"><Label htmlFor={`recipe-field-${k}`} className="text-xs">{label}</Label><Input id={`recipe-field-${k}`} value={r[k] ?? ""} onChange={(e) => setR({ ...r, [k]: e.target.value })} {...props} disabled={!canManage} /></div>
   );
   const sn = res.servingNutrition;
 
@@ -98,8 +135,9 @@ const RecipeDetail = () => {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowHist(!showHist)}><History /> History ({versions.length})</Button>
-          <Button variant="ghost" onClick={del}><Trash2 /></Button>
-          <Button onClick={saveRecipe}><Save /> Save</Button>
+          {!r.is_subrecipe && <Button variant="outline" disabled={!canManage} onClick={togglePublished}>{r.is_published === false ? <><EyeOff /> Hidden</> : <><Eye /> Visible</>}</Button>}
+          <Button variant="ghost" disabled={!canManage} onClick={del} aria-label="Delete recipe"><Trash2 /></Button>
+          <Button disabled={!canManage} onClick={saveRecipe}><Save /> Save</Button>
         </div>
       </div>
 
@@ -113,25 +151,31 @@ const RecipeDetail = () => {
             {F("category", "Category")}
             {F("batch_yield_qty", "Batch yield", { type: "number" })}
             <div className="space-y-1"><Label className="text-xs">Yield unit</Label>
-              <select className="w-full h-10 border border-input rounded-md bg-background px-2 text-sm" value={r.batch_yield_unit} onChange={(e) => setR({ ...r, batch_yield_unit: e.target.value })}>
+              <select className="w-full h-10 border border-input rounded-md bg-background px-2 text-sm" value={r.batch_yield_unit} disabled={!canManage} onChange={(e) => setR({ ...r, batch_yield_unit: e.target.value })}>
                 {UNIT_LIST.map((u) => <option key={u} value={u}>{UNITS[u].label}</option>)}</select></div>
             {F("servings_per_batch", "Servings per batch", { type: "number" })}
             {F("serving_size_text", "Serving size")}
             {!r.is_subrecipe && <>{F("packaging_cost", "Packaging $/item", { type: "number", step: "0.01" })}{F("selling_price", "Menu price $", { type: "number", step: "0.01" })}</>}
+            {!r.is_subrecipe && <>
+              <div className="col-span-2 sm:col-span-4 space-y-1"><Label className="text-xs">Public description</Label>
+                <Textarea disabled={!canManage} rows={2} value={r.description ?? ""} onChange={(e) => setR({ ...r, description: e.target.value })} /></div>
+              <div className="col-span-2 sm:col-span-4">{F("image_url", "Image URL", { placeholder: "https://…" })}</div>
+            </>}
             <div className="col-span-2 sm:col-span-4 space-y-1"><Label className="text-xs">Preparation notes (optional)</Label>
-              <Textarea rows={3} value={r.instructions ?? ""} onChange={(e) => setR({ ...r, instructions: e.target.value })} /></div>
+              <Textarea disabled={!canManage} rows={3} value={r.instructions ?? ""} onChange={(e) => setR({ ...r, instructions: e.target.value })} /></div>
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
             <p className="font-medium">Ingredients</p>
             {res.lines.map(({ line, name, cost, issues }) => (
-              <div key={line.id} className="flex items-center justify-between gap-2 py-2 border-b border-border text-sm">
-                <div className="min-w-0"><p className="truncate">{name}</p><p className="text-xs text-muted-foreground">{Number(line.quantity)} {UNITS[line.unit as keyof typeof UNITS]?.label || line.unit}{issues.length > 0 && <span className="text-amber-600"> · {issues.join(", ")}</span>}</p></div>
-                <div className="flex items-center gap-2"><span className="tabular-nums">{cost != null ? money(cost, 3) : "—"}</span><button onClick={() => removeLine(line.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button></div>
+              <div key={line.id} className="flex items-start justify-between gap-2 py-2 border-b border-border text-sm">
+                <div className="min-w-0"><p className="truncate">{name}</p><p className="text-xs text-muted-foreground">{Number(line.quantity)} {UNITS[line.unit as keyof typeof UNITS]?.label || line.unit}{issues.length > 0 && <span className="text-amber-600"> · {issues.join(", ")}</span>}</p>
+                  <RecipeLineAmount key={`${line.id}-${line.quantity}-${line.unit}`} lineId={line.id} quantity={line.quantity} unit={line.unit} disabled={!canManage} onSave={(qty, u) => saveAmount(line.id, qty, u)} /></div>
+                <div className="flex items-center gap-2"><span className="tabular-nums">{cost != null ? money(cost, 3) : "—"}</span><button disabled={!canManage} aria-label="Remove line" onClick={() => removeLine(line.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button></div>
               </div>
             ))}
             <div className="grid grid-cols-[1fr_90px_110px_auto] gap-2 pt-2">
-              <select className="h-10 border border-input rounded-md bg-background px-2 text-sm min-w-0" value={add.ref} onChange={(e) => {
+              <select disabled={!canManage} className="h-10 border border-input rounded-md bg-background px-2 text-sm min-w-0" value={add.ref} onChange={(e) => {
                 const [k, rid] = e.target.value.split(":");
                 const base = k === "i" ? ctx.ingredients.get(rid)?.base_unit : ctx.recipes.get(rid)?.batch_yield_unit;
                 setAdd({ ...add, ref: e.target.value, unit: base || add.unit });
@@ -140,10 +184,10 @@ const RecipeDetail = () => {
                 <optgroup label="Ingredients">{ctx.ingredientList.map((i) => <option key={i.id} value={`i:${i.id}`}>{i.name}{i.brand ? ` · ${i.brand}` : ""}</option>)}</optgroup>
                 <optgroup label="Sub-recipes">{ctx.recipeList.filter((x) => x.is_subrecipe && x.id !== r.id).map((x) => <option key={x.id} value={`r:${x.id}`}>{x.name}</option>)}</optgroup>
               </select>
-              <Input type="number" placeholder="Qty" value={add.quantity} onChange={(e) => setAdd({ ...add, quantity: e.target.value })} />
-              <select className="h-10 border border-input rounded-md bg-background px-2 text-sm" value={add.unit} onChange={(e) => setAdd({ ...add, unit: e.target.value })}>
+              <Input disabled={!canManage} type="number" placeholder="Qty" value={add.quantity} onChange={(e) => setAdd({ ...add, quantity: e.target.value })} />
+              <select disabled={!canManage} className="h-10 border border-input rounded-md bg-background px-2 text-sm" value={add.unit} onChange={(e) => setAdd({ ...add, unit: e.target.value })}>
                 {UNIT_LIST.map((u) => <option key={u} value={u}>{UNITS[u].label}</option>)}</select>
-              <Button onClick={addLine}><Plus /></Button>
+               <Button disabled={!canManage} onClick={addLine}><Plus /></Button>
             </div>
             <p className="text-xs text-muted-foreground">Enter the usable (as-used) amount. Trim loss from each ingredient's yield is added to cost automatically.</p>
           </div>

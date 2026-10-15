@@ -44,6 +44,9 @@ Solace helps restaurants manage ingredient nutrition and costs, build recipes, p
 - Keep local UUID identities separate from Clerk provider IDs to preserve the imported relational model.
 - Authenticate private document downloads on every request; do not expose reusable public bearer links.
 - Owner manages team/settings/locations; owner and manager manage recipes, inventory, approvals, and sales; staff uploads invoices but cannot approve them.
+- Modern menu recipes are the authoritative dishes in menu management and public menus; never create duplicate legacy `menu_items` for them. Legacy entries retain their own IDs, editor and visibility.
+- Private costing and public nutrition share `@workspace/recipe-engine`. Public responses calculate current saved per-serving nutrients server-side and expose only retail/menu fields, not costs or preparation notes.
+- Newly created menu recipes publish by default; existing recipe visibility is preserved and sub-recipes remain private. Owners/managers can show older hidden recipes from menu management. Public pages refresh every 15 seconds while visible. Incomplete quantities, conversions, sources or servings produce unavailable nutrition, not a misleading zero.
 
 ## Product
 
@@ -63,6 +66,7 @@ Solace helps restaurants manage ingredient nutrition and costs, build recipes, p
 - A manual frontend production build requires `PORT` and `BASE_PATH` (normally supplied by artifact tooling).
 - Do not reintroduce Supabase or the Lovable AI gateway into active runtime paths.
 - Never run development schema pushes against production without an explicitly approved migration.
+- Recipe synchronization uses the additive `recipes.public_menu_synced` schema field. API startup applies its idempotent additive migration before initializing provenance, without publishing existing hidden recipes. A newly added provenance flag is not evidence of an owner's permission to publish. Legacy visibility is never backfilled.
 
 ## Pointers
 

@@ -31,6 +31,8 @@ import type {
   FunctionInput,
   HealthStatus,
   LocalUser,
+  PublicMenu,
+  RestaurantMenu,
   UploadDestination,
   UploadInput
 } from './api.schemas';
@@ -61,6 +63,160 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetPublicMenuUrl = (slug: string,) => {
+
+
+
+
+  return `/api/public-menu/${slug}`
+}
+
+/**
+ * @summary Public dishes and live per-serving nutrition only
+ */
+export const getPublicMenu = async (slug: string, options?: Parameters<typeof customFetch>[1]): Promise<PublicMenu> => {
+
+  return customFetch<PublicMenu>(getGetPublicMenuUrl(slug),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPublicMenuQueryKey = (slug: string,) => {
+    return [
+    `/api/public-menu/${slug}`
+    ] as const;
+    }
+
+
+export const getGetPublicMenuQueryOptions = <TData = Awaited<ReturnType<typeof getPublicMenu>>, TError = ErrorType<void>>(slug: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublicMenu>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPublicMenuQueryKey(slug);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublicMenu>>> = ({ signal }) => getPublicMenu(slug, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: slug !== null && slug !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPublicMenu>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPublicMenuQueryResult = NonNullable<Awaited<ReturnType<typeof getPublicMenu>>>
+export type GetPublicMenuQueryError = ErrorType<void>
+
+
+/**
+ * @summary Public dishes and live per-serving nutrition only
+ */
+
+export function useGetPublicMenu<TData = Awaited<ReturnType<typeof getPublicMenu>>, TError = ErrorType<void>>(
+ slug: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublicMenu>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPublicMenuQueryOptions(slug,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetRestaurantMenuUrl = (restaurantId: string,) => {
+
+
+
+
+  return `/api/restaurants/${restaurantId}/menu`
+}
+
+/**
+ * @summary Unified recipe and legacy menu view for restaurant members
+ */
+export const getRestaurantMenu = async (restaurantId: string, options?: Parameters<typeof customFetch>[1]): Promise<RestaurantMenu> => {
+
+  return customFetch<RestaurantMenu>(getGetRestaurantMenuUrl(restaurantId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRestaurantMenuQueryKey = (restaurantId: string,) => {
+    return [
+    `/api/restaurants/${restaurantId}/menu`
+    ] as const;
+    }
+
+
+export const getGetRestaurantMenuQueryOptions = <TData = Awaited<ReturnType<typeof getRestaurantMenu>>, TError = ErrorType<void>>(restaurantId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRestaurantMenu>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRestaurantMenuQueryKey(restaurantId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRestaurantMenu>>> = ({ signal }) => getRestaurantMenu(restaurantId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: restaurantId !== null && restaurantId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRestaurantMenu>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRestaurantMenuQueryResult = NonNullable<Awaited<ReturnType<typeof getRestaurantMenu>>>
+export type GetRestaurantMenuQueryError = ErrorType<void>
+
+
+/**
+ * @summary Unified recipe and legacy menu view for restaurant members
+ */
+
+export function useGetRestaurantMenu<TData = Awaited<ReturnType<typeof getRestaurantMenu>>, TError = ErrorType<void>>(
+ restaurantId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRestaurantMenu>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRestaurantMenuQueryOptions(restaurantId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getHealthCheckUrl = () => {
 

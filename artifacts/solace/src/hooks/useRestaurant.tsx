@@ -2,7 +2,7 @@ import type React from "react";
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { dataApi as supabase } from "@/lib/data";
 import { useAuth } from "./useAuth";
-import { computeRecipe, type Ctx, type CostIngredient, type CostLine, type CostRecipe } from "@/lib/costing";
+import { type Ctx, type CostIngredient, type CostLine, type CostRecipe } from "@/lib/costing";
 
 export type Role = "owner" | "manager" | "staff";
 type Restaurant = { id: string; name: string; price_alert_threshold_pct: number; invoice_retention_days: number | null };
@@ -57,30 +57,20 @@ export async function loadCostCtx(restaurantId: string): Promise<Ctx & { recipeL
   ]);
   const ids = (recs || []).map((r) => r.id);
   const { data: lines } = ids.length ? await supabase.from("recipe_lines").select("*").in("recipe_id", ids).order("position") : { data: [] as any[] };
+  const known = new Set((ings || []).map(i => i.id));
+  const referenced = [...new Set((lines || []).map(l => l.ingredient_id).filter(id => id && !known.has(id)))];
+  const { data: referencedIngredients } = referenced.length
+    ? await supabase.from("ingredients").select("*").in("id", referenced) : { data: [] as any[] };
+  const ingredientList = [...(ings || []), ...(referencedIngredients || [])];
   const ctx: Ctx = {
-    ingredients: new Map((ings || []).map((i: any) => [i.id, i as CostIngredient])),
+    ingredients: new Map(ingredientList.map((i: any) => [i.id, i as CostIngredient])),
     recipes: new Map((recs || []).map((r: any) => [r.id, r as CostRecipe])),
     lines: (lines || []) as CostLine[],
   };
-  syncPublicMacros(recs || [], ctx);
   return {
-    ingredients: new Map((ings || []).map((i: any) => [i.id, i as CostIngredient])),
-    recipes: new Map((recs || []).map((r: any) => [r.id, r as CostRecipe])),
-    lines: (lines || []) as CostLine[],
+    ...ctx,
     recipeList: (recs || []) as any,
-    ingredientList: ings || [],
+    ingredientList,
   };
 }
 
-/** Keep the public menu's macros in step with recipe nutrition. Incomplete nutrition is published as null (never zero). */
-function syncPublicMacros(recs: any[], ctx: Ctx) {
-  for (const r of recs) {
-    if (r.is_subrecipe) continue;
-    const res = computeRecipe(r.id, ctx);
-    const n = res.servingNutrition;
-    const next = res.nutritionComplete ? { calories: n.calories, protein: n.protein, carbs: n.carbs, fats: n.fats } : null;
-    if (JSON.stringify(next) !== JSON.stringify(r.public_macros ?? null)) {
-      supabase.from("recipes").update({ public_macros: next as any }).eq("id", r.id).then(() => {});
-    }
-  }
-}

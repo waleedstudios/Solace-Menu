@@ -5,6 +5,63 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface MenuNutrition {
+  /** @minimum 0 */
+  calories: number;
+  /** @minimum 0 */
+  protein: number;
+  /** @minimum 0 */
+  carbs: number;
+  /** @minimum 0 */
+  fats: number;
+}
+
+export type PublicMenuItemSource = typeof PublicMenuItemSource[keyof typeof PublicMenuItemSource];
+
+
+export const PublicMenuItemSource = {
+  recipe: 'recipe',
+  legacy: 'legacy',
+} as const;
+
+export interface PublicMenuItem {
+  id: string;
+  source: PublicMenuItemSource;
+  name: string;
+  /** @nullable */
+  description: string | null;
+  /** @nullable */
+  category: string | null;
+  /** @nullable */
+  image_url: string | null;
+  /** @nullable */
+  selling_price: number | null;
+  /** @nullable */
+  serving_size_text: string | null;
+  macros: MenuNutrition | null;
+  nutrition_complete: boolean;
+  estimated_nutrition: boolean;
+  /** @minimum 0 */
+  ingredient_count: number;
+}
+
+export type ManagedMenuItem = PublicMenuItem & {
+  is_published: boolean;
+  can_edit: boolean;
+};
+
+export interface PublicMenu {
+  restaurant_name: string;
+  slug: string;
+  items: PublicMenuItem[];
+}
+
+export interface RestaurantMenu {
+  restaurant_name: string;
+  slug: string;
+  items: ManagedMenuItem[];
+}
+
 export interface HealthStatus {
   status: string;
 }

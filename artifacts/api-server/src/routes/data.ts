@@ -5,6 +5,7 @@ import { accountView, completeBusinessSetup } from "../lib/onboarding";
 import { localUser, authorizeRestaurant, memberRole, HttpError } from "../lib/auth";
 import { columnsFor, isTable, type TableName } from "../lib/dataTables";
 import { accessClause, validatePayload } from "../lib/dataPolicy";
+import { readPublicMenu } from "../lib/menu";
 
 const router: IRouter = Router();
 const quote = (s: string) => `"${s}"`;
@@ -118,6 +119,13 @@ router.post("/data/query", async (req, res): Promise<void> => {
           for (const key of Object.keys(row)) if (!columns.has(key)) throw new HttpError(400, `Unknown field: ${key}`);
           if (input.operation === "update") {
             const originals = (await client.query(`SELECT t.* FROM ${quote(table)} t WHERE ${where}`, params)).rows;
+            if (table === "recipes") {
+              row.public_menu_synced = true;
+              if (row.is_subrecipe === true) row.is_published = false;
+              if (row.is_published === true && originals.some(o => row.is_subrecipe === undefined ? o.is_subrecipe : row.is_subrecipe)) {
+                throw new HttpError(400, "Sub-recipes stay private.");
+              }
+            }
             for (const original of originals) {
               for (const key of ["id", "restaurant_id", "user_id", "owner_id", "created_at", "uploaded_by", "created_by"]) {
                 if (key in row && String(row[key]) !== String(original[key])) throw new HttpError(403, "Record ownership cannot be changed.");
@@ -133,6 +141,13 @@ router.post("/data/query", async (req, res): Promise<void> => {
             const sets = Object.keys(row).map((key) => { updateParams.push(row[key]); return `${quote(key)} = $${updateParams.length}`; });
             rows.push(...(await client.query(`UPDATE ${quote(table)} t SET ${sets.join(",")} WHERE ${where} RETURNING t.*`, updateParams)).rows);
           } else {
+            if (table === "recipes") {
+              const existing = input.operation === "upsert" && row.id
+                ? (await client.query("SELECT is_published, is_subrecipe FROM recipes WHERE id = $1", [row.id])).rows[0] : undefined;
+              row.public_menu_synced = true;
+              row.is_published = (row.is_subrecipe ?? existing?.is_subrecipe) === true
+                ? false : row.is_published ?? existing?.is_published ?? true;
+            }
             await validatePayload(table, row, user.id, "insert");
             if (row.id || row.created_at) throw new HttpError(400, "Record IDs and creation dates are assigned by the server.");
             for (const field of ["uploaded_by", "created_by", "approved_by"]) if (field in row) row[field] = user.id;
@@ -146,6 +161,9 @@ router.post("/data/query", async (req, res): Promise<void> => {
             rows.push(...(await client.query(`INSERT INTO ${quote(table)} (${fields.map(quote).join(",")}) VALUES (${values.map((_, i) => `$${i + 1}`).join(",")})${conflict} RETURNING *`, values)).rows);
           }
         }
+      }
+      if (["update", "delete"].includes(input.operation) && !rows!.length) {
+        throw new HttpError(403, "Record not found or you do not have permission to edit it.");
       }
       await client.query("COMMIT");
     } catch (err) { await client.query("ROLLBACK"); throw err; }
@@ -162,10 +180,9 @@ router.post("/data/rpc", async (req, res): Promise<void> => {
   const { name, args } = parsed.data;
   if (name === "get_public_menu") {
     if (typeof args._slug !== "string") throw new HttpError(400, "A menu slug is required.");
-    const result = await pool.query(`SELECT r.id, r.name, r.description, r.category, r.image_url, r.public_macros AS macros
-      FROM recipes r JOIN restaurants rest ON rest.id = r.restaurant_id JOIN profiles p ON p.id = rest.owner_id
-      WHERE p.slug = $1 AND r.is_published AND NOT r.is_subrecipe ORDER BY r.created_at DESC`, [args._slug]);
-    res.json({ data: result.rows, error: null }); return;
+    const menu = await readPublicMenu(args._slug);
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ data: menu.items.filter(i => i.source === "recipe"), error: null }); return;
   }
   const user = (await localUser(req))!;
   if (typeof args._restaurant !== "string" || typeof args._email !== "string" || !["manager", "staff"].includes(String(args._role))) throw new HttpError(400, "Choose a restaurant, email, and role.");

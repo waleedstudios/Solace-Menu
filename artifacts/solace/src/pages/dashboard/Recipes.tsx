@@ -58,9 +58,11 @@ const Recipes = () => {
             ingId = ni.id; byName.set(key, ingId);
           }
           // Quantity is unknown from a menu photo: left at 0 so the recipe is flagged until grams are entered.
-          await supabase.from("recipe_lines").insert({ recipe_id: rec!.id, ingredient_id: ingId, quantity: 0, unit: "g", position: pos++ });
+          const { error: lineError } = await supabase.from("recipe_lines").insert({ recipe_id: rec!.id, ingredient_id: ingId, quantity: 0, unit: "g", position: pos++ });
+          if (lineError) throw lineError;
         }
         added++;
+        existing.add(it.name.trim().toLowerCase());
       }
       toast.success(`Added ${added} menu item${added === 1 ? "" : "s"}. Enter ingredient amounts to calculate macros.`);
       reload();

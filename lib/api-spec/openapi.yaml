@@ -11,6 +11,44 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /public-menu/{slug}:
+    get:
+      operationId: getPublicMenu
+      summary: Public dishes and live per-serving nutrition only
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "200":
+          description: Public menu without private costing data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicMenu"
+        "404":
+          description: Menu not found
+  /restaurants/{restaurantId}/menu:
+    get:
+      operationId: getRestaurantMenu
+      summary: Unified recipe and legacy menu view for restaurant members
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Restaurant menu including hidden entries and edit permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestaurantMenu"
+        "401":
+          description: Not signed in
+        "403":
+          description: Not a restaurant member
   /healthz:
     get:
       operationId: healthCheck
@@ -227,6 +265,59 @@ paths:
           description: AI temporarily unavailable
 components:
   schemas:
+    MenuNutrition:
+      type: object
+      required: [calories, protein, carbs, fats]
+      properties:
+        calories: { type: number, minimum: 0 }
+        protein: { type: number, minimum: 0 }
+        carbs: { type: number, minimum: 0 }
+        fats: { type: number, minimum: 0 }
+    PublicMenuItem:
+      type: object
+      required: [id, source, name, description, category, image_url, selling_price, serving_size_text, macros, nutrition_complete, estimated_nutrition, ingredient_count]
+      properties:
+        id: { type: string, format: uuid }
+        source: { type: string, enum: [recipe, legacy] }
+        name: { type: string }
+        description: { type: [string, "null"] }
+        category: { type: [string, "null"] }
+        image_url: { type: [string, "null"] }
+        selling_price: { type: [number, "null"] }
+        serving_size_text: { type: [string, "null"] }
+        macros:
+          anyOf:
+            - $ref: "#/components/schemas/MenuNutrition"
+            - type: "null"
+        nutrition_complete: { type: boolean }
+        estimated_nutrition: { type: boolean }
+        ingredient_count: { type: integer, minimum: 0 }
+    ManagedMenuItem:
+      allOf:
+        - $ref: "#/components/schemas/PublicMenuItem"
+        - type: object
+          required: [is_published, can_edit]
+          properties:
+            is_published: { type: boolean }
+            can_edit: { type: boolean }
+    PublicMenu:
+      type: object
+      required: [restaurant_name, slug, items]
+      properties:
+        restaurant_name: { type: string }
+        slug: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PublicMenuItem" }
+    RestaurantMenu:
+      type: object
+      required: [restaurant_name, slug, items]
+      properties:
+        restaurant_name: { type: string }
+        slug: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ManagedMenuItem" }
     HealthStatus:
       type: object
       properties:

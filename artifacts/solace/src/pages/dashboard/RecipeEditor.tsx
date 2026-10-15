@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { dataApi as supabase } from "@/lib/data";
 import { useAuth } from "@/hooks/useAuth";
+import { useRestaurant } from "@/hooks/useRestaurant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ const RecipeEditor = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { canManage } = useRestaurant();
 
   const [item, setItem] = useState<MenuItem | null>(null);
   const [recipe, setRecipe] = useState<RecipeItem[]>([]);
@@ -47,6 +49,10 @@ const RecipeEditor = () => {
         supabase.from("portion_units").select("*").eq("user_id", user.id).order("name"),
         supabase.from("recipe_items").select("*").eq("menu_item_id", id),
       ]);
+      if (!mi) {
+        const { data: rec } = await supabase.from("recipes").select("id").eq("id", id).maybeSingle();
+        if (rec && canManage) { navigate(`/dashboard/recipes/${id}`, { replace: true }); return; }
+      }
       if (!mi || mi.user_id !== user.id) { toast.error("Not found"); navigate("/dashboard/menu"); return; }
       setItem(mi as MenuItem);
       setIngredients((ing as Ingredient[]) || []);

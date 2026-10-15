@@ -9,6 +9,101 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Public dishes and live per-serving nutrition only
+ */
+export const getPublicMenuPathSlugMax = 200;
+
+
+
+export const GetPublicMenuParams = zod.object({
+  "slug": zod.coerce.string().min(1).max(getPublicMenuPathSlugMax)
+})
+
+export const getPublicMenuResponseItemsItemMacrosOneCaloriesMin = 0;
+
+export const getPublicMenuResponseItemsItemMacrosOneProteinMin = 0;
+
+export const getPublicMenuResponseItemsItemMacrosOneCarbsMin = 0;
+
+export const getPublicMenuResponseItemsItemMacrosOneFatsMin = 0;
+
+export const getPublicMenuResponseItemsItemIngredientCountMin = 0;
+
+
+
+export const GetPublicMenuResponse = zod.object({
+  "restaurant_name": zod.string(),
+  "slug": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "source": zod.enum(['recipe', 'legacy']),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "category": zod.string().nullable(),
+  "image_url": zod.string().nullable(),
+  "selling_price": zod.number().nullable(),
+  "serving_size_text": zod.string().nullable(),
+  "macros": zod.union([zod.object({
+  "calories": zod.number().min(getPublicMenuResponseItemsItemMacrosOneCaloriesMin),
+  "protein": zod.number().min(getPublicMenuResponseItemsItemMacrosOneProteinMin),
+  "carbs": zod.number().min(getPublicMenuResponseItemsItemMacrosOneCarbsMin),
+  "fats": zod.number().min(getPublicMenuResponseItemsItemMacrosOneFatsMin)
+}),zod.null()]),
+  "nutrition_complete": zod.boolean(),
+  "estimated_nutrition": zod.boolean(),
+  "ingredient_count": zod.number().int().min(getPublicMenuResponseItemsItemIngredientCountMin)
+}))
+})
+
+
+/**
+ * @summary Unified recipe and legacy menu view for restaurant members
+ */
+export const GetRestaurantMenuParams = zod.object({
+  "restaurantId": zod.coerce.string().uuid()
+})
+
+export const getRestaurantMenuResponseItemsItemOneMacrosOneCaloriesMin = 0;
+
+export const getRestaurantMenuResponseItemsItemOneMacrosOneProteinMin = 0;
+
+export const getRestaurantMenuResponseItemsItemOneMacrosOneCarbsMin = 0;
+
+export const getRestaurantMenuResponseItemsItemOneMacrosOneFatsMin = 0;
+
+export const getRestaurantMenuResponseItemsItemOneIngredientCountMin = 0;
+
+
+
+export const GetRestaurantMenuResponse = zod.object({
+  "restaurant_name": zod.string(),
+  "slug": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "source": zod.enum(['recipe', 'legacy']),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "category": zod.string().nullable(),
+  "image_url": zod.string().nullable(),
+  "selling_price": zod.number().nullable(),
+  "serving_size_text": zod.string().nullable(),
+  "macros": zod.union([zod.object({
+  "calories": zod.number().min(getRestaurantMenuResponseItemsItemOneMacrosOneCaloriesMin),
+  "protein": zod.number().min(getRestaurantMenuResponseItemsItemOneMacrosOneProteinMin),
+  "carbs": zod.number().min(getRestaurantMenuResponseItemsItemOneMacrosOneCarbsMin),
+  "fats": zod.number().min(getRestaurantMenuResponseItemsItemOneMacrosOneFatsMin)
+}),zod.null()]),
+  "nutrition_complete": zod.boolean(),
+  "estimated_nutrition": zod.boolean(),
+  "ingredient_count": zod.number().int().min(getRestaurantMenuResponseItemsItemOneIngredientCountMin)
+}).and(zod.object({
+  "is_published": zod.boolean(),
+  "can_edit": zod.boolean()
+})))
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */

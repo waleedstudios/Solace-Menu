@@ -40,6 +40,7 @@ export const recipes = pgTable("recipes", {
   selling_price: doublePrecision("selling_price"),
   packaging_cost: doublePrecision("packaging_cost").default(0).notNull(),
   is_published: boolean("is_published").default(false).notNull(),
+  public_menu_synced: boolean("public_menu_synced").default(false).notNull(),
   is_subrecipe: boolean("is_subrecipe").default(false).notNull(),
   public_macros: jsonb("public_macros"),
   version: integer("version").default(1).notNull(),
