@@ -11,6 +11,75 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /invoices/{invoiceId}/approve:
+    post:
+      operationId: approveSupplierInvoice
+      summary: Atomically approve a reviewed invoice and update shared ingredient prices
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceApprovalInput"
+      responses:
+        "200":
+          description: Approved, or already approved on an earlier attempt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceApprovalResult"
+        "400":
+          description: Invalid invoice ID or approval input
+        "401":
+          description: Sign in first
+        "403":
+          description: Owner or manager required
+        "404":
+          description: Invoice not found
+        "409":
+          description: Invoice is not ready for approval
+        "422":
+          description: Correct invoice validation errors before approval
+  /invoices/{invoiceId}/extract:
+    post:
+      operationId: extractSupplierInvoice
+      summary: Read private invoice documents and atomically save extracted lines with match suggestions
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Ready for review
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [review] }
+        "400":
+          description: Invalid invoice or missing documents
+        "401":
+          description: Sign in first
+        "403":
+          description: Owner or manager required
+        "404":
+          description: Invoice not found
+        "409":
+          description: Approved or extraction already in progress
+        "422":
+          description: Nothing could be extracted
+        "429":
+          description: AI is busy
+        "502":
+          description: Extraction failed and may be retried
   /public/restaurants:
     get:
       operationId: discoverRestaurants
@@ -272,6 +341,9 @@ paths:
       responses:
         "200":
           description: Document content
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
         "403":
           description: Forbidden
         "404":
@@ -315,6 +387,25 @@ paths:
           description: AI temporarily unavailable
 components:
   schemas:
+    InvoiceApprovalInput:
+      type: object
+      properties:
+        accept_total_mismatch: { type: boolean, default: false }
+    InvoiceApprovalResult:
+      type: object
+      required: [already_approved, changes]
+      properties:
+        already_approved: { type: boolean }
+        changes:
+          type: array
+          items:
+            type: object
+            required: [ingredient_id, prev, next, becameCurrent]
+            properties:
+              ingredient_id: { type: string, format: uuid }
+              prev: { type: [number, "null"] }
+              next: { type: [number, "null"] }
+              becameCurrent: { type: boolean }
     AccountDeletionRequest:
       type: object
       required: [confirmation]

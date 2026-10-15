@@ -5,3 +5,5 @@
 - [Authentication query boundaries](auth-query-boundaries.md) — preserve guest menu queries during auth initialization and private-session cache resets.
 - [Mobile product scope](mobile-product-scope.md) — both customer and restaurant audiences; preserve the website and share its real backend.
 - [Expo SDK compatibility](expo-sdk-alignment.md) — align native modules with the active SDK, not stale example pins; keep supply-chain protections intact.
+- [Database timestamp precision](database-timestamp-precision.md) — preserve PostgreSQL precision when timestamps identify a background operation or guard a conditional update.
+- [Mobile test authentication](mobile-test-authentication.md) — a shared-host browser test session does not sign into the separate Expo preview origin.

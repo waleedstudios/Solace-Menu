@@ -5,6 +5,24 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface InvoiceApprovalInput {
+  accept_total_mismatch?: boolean;
+}
+
+export type InvoiceApprovalResultChangesItem = {
+  ingredient_id: string;
+  /** @nullable */
+  prev: number | null;
+  /** @nullable */
+  next: number | null;
+  becameCurrent: boolean;
+};
+
+export interface InvoiceApprovalResult {
+  already_approved: boolean;
+  changes: InvoiceApprovalResultChangesItem[];
+}
+
 export type AccountDeletionRequestConfirmation = typeof AccountDeletionRequestConfirmation[keyof typeof AccountDeletionRequestConfirmation];
 
 
@@ -303,6 +321,17 @@ export type ExtractionResultData = { [key: string]: unknown };
 export interface ExtractionResult {
   data: ExtractionResultData;
 }
+
+export type ExtractSupplierInvoice200Status = typeof ExtractSupplierInvoice200Status[keyof typeof ExtractSupplierInvoice200Status];
+
+
+export const ExtractSupplierInvoice200Status = {
+  review: 'review',
+} as const;
+
+export type ExtractSupplierInvoice200 = {
+  status: ExtractSupplierInvoice200Status;
+};
 
 export type DiscoverRestaurantsParams = {
 /**

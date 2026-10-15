@@ -25,12 +25,8 @@ export function accessClause(table: TableName, userId: string | null, write: boo
       return write
         ? `((t.restaurant_id IS NOT NULL AND ${member("t.restaurant_id")}) OR (t.restaurant_id IS NULL AND t.user_id = ${uid}))`
         : `((t.restaurant_id IS NULL AND (t.user_id IS NULL OR t.user_id = ${uid})) OR ${member("t.restaurant_id")} OR EXISTS (SELECT 1 FROM recipe_items ri JOIN menu_items mi ON mi.id = ri.menu_item_id WHERE ri.ingredient_id = t.id AND mi.is_published))`;
-    case "invoices": return write
-      ? `(${member("t.restaurant_id")} OR (t.uploaded_by = ${uid} AND t.status <> 'approved' AND ${anyMember("t.restaurant_id")}))`
-      : anyMember("t.restaurant_id");
-    case "invoice_lines": return write
-      ? `(${member("t.restaurant_id")} OR EXISTS (SELECT 1 FROM invoices i WHERE i.id = t.invoice_id AND i.uploaded_by = ${uid} AND i.status = 'extracting' AND ${anyMember("i.restaurant_id")}))`
-      : anyMember("t.restaurant_id");
+    case "invoices": return write ? member("t.restaurant_id") : anyMember("t.restaurant_id");
+    case "invoice_lines": return write ? member("t.restaurant_id") : anyMember("t.restaurant_id");
     default:
       if (!userId) return "FALSE";
       return member("t.restaurant_id", table === "locations");
@@ -56,7 +52,7 @@ export async function validatePayload(table: TableName, row: Record<string, any>
     const invoiceFlow = ["invoices", "invoice_lines"].includes(table);
     const role = await authorizeRestaurant(userId, restaurantId, !invoiceFlow, ["locations", "restaurant_members", "restaurants"].includes(table));
     if (role === "staff" && table === "invoices") {
-      if (row.uploaded_by !== userId || row.status === "approved" || row.approved_at || row.approved_by) throw new HttpError(403, "Staff can upload invoices but cannot approve them.");
+      if (operation !== "insert" || row.uploaded_by !== userId || (row.status && row.status !== "uploaded") || row.approved_at || row.approved_by) throw new HttpError(403, "Staff can capture invoices but cannot review or approve them.");
     }
     if (role === "staff" && table === "invoice_lines") {
       const invoice = (await pool.query("SELECT uploaded_by, status FROM invoices WHERE id = $1", [row.invoice_id])).rows[0];

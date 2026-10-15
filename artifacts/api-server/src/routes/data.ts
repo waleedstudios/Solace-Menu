@@ -60,6 +60,7 @@ router.post("/data/query", async (req, res): Promise<void> => {
   const input = parsed.data;
   if (!isTable(input.table)) throw new HttpError(400, "Unknown table.");
   const table = input.table;
+  if (input.operation !== "select" && table === "price_history") throw new HttpError(403, "Price history is written only by invoice approval.");
   const user = await localUser(req, input.operation !== "select");
   const columns = columnsFor(table);
   const params: unknown[] = [];
@@ -92,6 +93,17 @@ router.post("/data/query", async (req, res): Promise<void> => {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
+      // All invoice/line writes take the same parent lock as approval and extraction.
+      const lockInvoice = async (id: string) => {
+        const invoice = (await client.query("SELECT * FROM invoices WHERE id = $1 FOR UPDATE", [id])).rows[0];
+        if (!invoice) throw new HttpError(404, "Invoice not found.");
+        await authorizeRestaurant(user.id, invoice.restaurant_id, true, false, client);
+        if (["approved", "extracting"].includes(invoice.status)) throw new HttpError(409, "Approved invoices and invoices being read cannot be changed.");
+      };
+      if (["update", "delete"].includes(input.operation) && ["invoices", "invoice_lines"].includes(table)) {
+        const selected = (await client.query(`SELECT t.* FROM ${quote(table)} t WHERE ${where} ORDER BY t.id`, params)).rows;
+        for (const row of selected) await lockInvoice(table === "invoices" ? row.id : row.invoice_id);
+      }
       if (input.operation === "delete") {
         if (table === "invoices") {
           const selected = (await client.query(`SELECT t.* FROM invoices t WHERE ${where}`, params)).rows;
@@ -117,8 +129,14 @@ router.post("/data/query", async (req, res): Promise<void> => {
           if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new HttpError(400, "Invalid record.");
           const row = { ...payload } as Record<string, any>;
           for (const key of Object.keys(row)) if (!columns.has(key)) throw new HttpError(400, `Unknown field: ${key}`);
+          if (table === "invoices") {
+            if (row.status === "approved" || row.status === "extracting" || "approved_at" in row || "approved_by" in row) throw new HttpError(403, "Use the invoice extraction or approval operation.");
+            if (input.operation === "insert" && row.status && row.status !== "uploaded") throw new HttpError(400, "New invoices must start as uploaded.");
+          }
+          if (table === "ingredients" && ["current_cost_date", "current_cost_invoice_id"].some(k => k in row)) throw new HttpError(403, "Invoice price references are updated only by invoice approval.");
+          if (table === "invoice_lines" && input.operation === "insert") await lockInvoice(row.invoice_id);
           if (input.operation === "update") {
-            const originals = (await client.query(`SELECT t.* FROM ${quote(table)} t WHERE ${where}`, params)).rows;
+            const originals = (await client.query(`SELECT t.* FROM ${quote(table)} t WHERE ${where} FOR UPDATE`, params)).rows;
             if (table === "recipes") {
               row.public_menu_synced = true;
               if (row.is_subrecipe === true) row.is_published = false;
@@ -127,14 +145,14 @@ router.post("/data/query", async (req, res): Promise<void> => {
               }
             }
             for (const original of originals) {
-              for (const key of ["id", "restaurant_id", "user_id", "owner_id", "created_at", "uploaded_by", "created_by"]) {
+              if (table === "ingredients" && original.current_cost_invoice_id && "current_cost" in row && row.current_cost !== original.current_cost) throw new HttpError(409, "This ingredient's cost comes from an approved invoice. Review a new invoice to change it, and reload the latest cost before saving other edits.");
+              for (const key of ["id", "restaurant_id", "user_id", "owner_id", "created_at", "uploaded_by", "created_by", ...(table === "invoice_lines" ? ["invoice_id"] : [])]) {
                 if (key in row && String(row[key]) !== String(original[key])) throw new HttpError(403, "Record ownership cannot be changed.");
               }
               if (table === "restaurant_members" && original.role === "owner") throw new HttpError(400, "The owner role cannot be changed.");
               await validatePayload(table, { ...original, ...row }, user.id, "update");
             }
             for (const key of ["id", "restaurant_id", "user_id", "owner_id", "created_at"]) delete row[key];
-            if (row.status === "approved") { row.approved_by = user.id; row.approved_at = new Date().toISOString(); }
             if (columns.has("updated_at")) row.updated_at = new Date().toISOString();
             if (!Object.keys(row).length) throw new HttpError(400, "No fields to update.");
             const updateParams = [...params];

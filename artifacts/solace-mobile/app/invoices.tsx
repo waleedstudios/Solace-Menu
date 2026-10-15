@@ -5,13 +5,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { File } from 'expo-file-system';
 import { fetch as expoFetch } from 'expo/fetch';
 import { completeUpload, requestUploadUrl } from '@workspace/api-client-react';
+import { InvoiceReview } from '@/components/InvoiceReview';
 import { Back, Button, Empty, Loading, Notice, Row, Screen, Title, Txt } from '@/components/ui';
 import { useAppState } from '@/providers/AppState';
-import { apiOrigin, money, rows, type Invoice } from '@/lib/domain';
+import { money, rows, type Invoice } from '@/lib/domain';
 
 export default function Invoices() {
   const app = useAppState(); const [busy, setBusy] = useState(false); const [error, setError] = useState<unknown>(null);
   const [blocked, setBlocked] = useState(false); const [success, setSuccess] = useState('');
+  const [selected, setSelected] = useState<Invoice | null>(null);
   async function capture(camera: boolean) {
     if (!app.restaurant || !app.account) return;
     setBusy(true); setError(null); setSuccess('');
@@ -38,19 +40,21 @@ export default function Invoices() {
       const uploaded = await expoFetch(destination.uploadURL, { method: 'PUT', headers: { 'Content-Type': type }, body });
       if (!uploaded.ok) throw new Error('The image could not be uploaded. Please try again.');
       await completeUpload({ path: logicalPath });
-      await rows<Invoice>({ table: 'invoices', operation: 'insert', payload: { restaurant_id: app.restaurant.id, uploaded_by: app.account.id, file_paths: [logicalPath], status: 'uploaded' } });
-      await app.refresh(); setSuccess('Invoice captured securely. Open full review to extract, match, and approve it on the website.');
+      const [invoice] = await rows<Invoice>({ table: 'invoices', operation: 'insert', payload: { restaurant_id: app.restaurant.id, uploaded_by: app.account.id, file_paths: [logicalPath], status: 'uploaded' } });
+      await app.refresh(); setSuccess('Invoice captured securely. An owner or manager can now extract, review, and approve it here.');
+      if (app.canManage) setSelected(invoice);
     } catch (e) { setError(e); } finally { setBusy(false); }
   }
   const invoices = app.workspace.invoices.filter(i => i.restaurant_id === app.restaurant?.id);
+  if (selected && app.restaurant?.id === selected.restaurant_id) return <InvoiceReview key={`${app.account?.id}:${selected.id}`} invoice={selected} onClose={() => setSelected(null)} />;
   return <Screen refreshing={app.busy} onRefresh={() => void app.refresh()}><Back /><Title eyebrow="From supplier to kitchen">Invoices</Title><Notice error={error} />{!!success && <Txt bold size={13}>{success}</Txt>}
     {!app.restaurant ? <Button title="Open kitchen" onPress={() => router.replace('/(tabs)/kitchen')} /> : <>
       <Button title="Photograph invoice" icon="camera" loading={busy} onPress={() => void capture(true)} />
       <Button title="Choose an invoice photo" secondary icon="image" disabled={busy} onPress={() => void capture(false)} />
       {blocked && Platform.OS !== 'web' && <Button title="Open camera settings" secondary onPress={() => void Linking.openSettings().catch(setError)} />}
-      <Txt muted size={12}>Private document storage. Extraction, matching, and approvals are available in the full website review.</Txt>
+      <Txt muted size={12}>Private document storage. Uploading never changes prices. {app.canManage ? 'Tap an invoice to extract, match, validate, and approve it.' : 'Staff capture invoices; an owner or manager handles review and approval.'}</Txt>
       {busy && <Loading />}
-      {invoices.length ? invoices.map(i => <Row key={i.id} title={i.vendor_name || i.invoice_number || 'Supplier invoice'} subtitle={`${i.status} · ${new Date(i.created_at).toLocaleDateString()}`} trailing={money(i.total)} onPress={() => void Linking.openURL(`${apiOrigin}/dashboard/invoices/${i.id}`).catch(setError)} />) : <Empty title="No invoices yet" text="Take a clear photo of a supplier invoice. It will appear here and on the website." />}
+      {invoices.length ? invoices.map(i => <Row key={i.id} title={i.vendor_name || i.invoice_number || 'Supplier invoice'} subtitle={`${i.status} · ${new Date(i.created_at).toLocaleDateString()}`} trailing={money(i.total)} onPress={app.canManage ? () => setSelected(i) : undefined} />) : <Empty title="No invoices yet" text="Take a clear photo of a supplier invoice. It will appear here and on the website." />}
     </>}
   </Screen>;
 }

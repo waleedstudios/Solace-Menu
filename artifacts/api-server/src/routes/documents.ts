@@ -84,9 +84,18 @@ router.post("/storage/documents/remove", async (req, res): Promise<void> => {
   for (const path of parsed.data.paths) {
     const record = await authorizedDocument(user.id, path);
     if (record.uploaded_by !== user.id) await authorizeRestaurant(user.id, record.restaurant_id, true);
-    try { const file = await documentStorage.getObjectEntityFile(record.object_path); await file.delete({ ignoreNotFound: true }); }
-    catch (error) { if (!(error instanceof ObjectNotFoundError)) throw error; }
-    await pool.query("DELETE FROM stored_files WHERE id = $1", [record.id]);
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const references = (await client.query("SELECT * FROM invoices WHERE $1 = ANY(file_paths) ORDER BY id FOR UPDATE", [path])).rows;
+      if (references.length) await authorizeRestaurant(user.id, record.restaurant_id, true, false, client);
+      if (references.some(i => ["approved", "extracting"].includes(i.status))) throw new HttpError(409, "Documents attached to approved invoices or invoices being read cannot be removed.");
+      try { const file = await documentStorage.getObjectEntityFile(record.object_path); await file.delete({ ignoreNotFound: true }); }
+      catch (error) { if (!(error instanceof ObjectNotFoundError)) throw error; }
+      await client.query("DELETE FROM stored_files WHERE id = $1", [record.id]);
+      await client.query("COMMIT");
+    } catch (error) { await client.query("ROLLBACK"); throw error; }
+    finally { client.release(); }
   }
   res.json({ removed: true });
 });

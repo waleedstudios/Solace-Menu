@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./units": "./src/units.ts"
+    "./units": "./src/units.ts",
+    "./invoices": "./src/invoices.ts"
   }
 }

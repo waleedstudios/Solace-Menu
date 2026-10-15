@@ -5,7 +5,7 @@ export type Restaurant = { id: string; name: string; owner_id: string; address: 
 export type Membership = { id: string; restaurant_id: string; user_id: string; role: string };
 export type Ingredient = CostIngredient & { restaurant_id: string | null; user_id: string | null };
 export type Recipe = CostRecipe & { restaurant_id: string; description: string | null; category: string | null; image_url: string | null; serving_size_text: string | null; is_published: boolean; is_subrecipe: boolean; version: number };
-export type Invoice = { id: string; restaurant_id: string; vendor_name: string | null; invoice_number: string | null; total: number | null; status: string; file_paths: string[]; created_at: string };
+export type Invoice = import('@workspace/recipe-engine/invoices').InvoiceDetails;
 export type Workspace = { restaurants: Restaurant[]; members: Membership[]; recipes: Recipe[]; ingredients: Ingredient[]; lines: CostLine[]; invoices: Invoice[] };
 export const emptyWorkspace: Workspace = { restaurants: [], members: [], recipes: [], ingredients: [], lines: [], invoices: [] };
 export async function rows<T>(input: DataRequest): Promise<T[]> {

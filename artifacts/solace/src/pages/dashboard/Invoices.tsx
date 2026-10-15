@@ -8,56 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Camera, FileUp, Loader2, ScanLine, Search } from "lucide-react";
 import { toast } from "sonner";
-import { sha256, STATUS_LABEL, DOC_LABEL, suggestMatch } from "@/lib/invoices";
+import { sha256, STATUS_LABEL, DOC_LABEL } from "@/lib/invoices";
+import { extractSupplierInvoice } from "@workspace/api-client-react";
 import { money } from "@/lib/units";
 
 export async function runExtraction(invoiceId: string, restaurantId: string, paths: string[], vendorHint?: string) {
-  try {
-  const started = await supabase.from("invoices").update({ status: "extracting", extraction_error: null }).eq("id", invoiceId);
-  if (started.error) throw new Error(started.error.message);
-  const { data, error } = await supabase.functions.invoke("extract-document", { body: { kind: "invoice", restaurant_id: restaurantId, paths } });
-  const result = (data as any)?.data;
-  if (error || !result) {
-    const msg = error?.message || (data as any)?.error || "Could not read this document";
-    throw new Error(msg);
-  }
-  const [{ data: ings, error: ingredientsError }, { data: aliases, error: aliasesError }] = await Promise.all([
-    supabase.from("ingredients").select("id, name, brand, supplier_code, base_unit, pack_count, pack_size, pack_unit, density_g_per_ml, current_cost, current_cost_date").eq("restaurant_id", restaurantId),
-    supabase.from("ingredient_aliases").select("ingredient_id, vendor_name, alias, product_code").eq("restaurant_id", restaurantId),
-  ]);
-  if (ingredientsError || aliasesError) throw new Error(ingredientsError?.message || aliasesError?.message);
-  const vendor = result.vendor_name || vendorHint || null;
-  const cleared = await supabase.from("invoice_lines").delete().eq("invoice_id", invoiceId);
-  if (cleared.error) throw new Error(cleared.error.message);
-  const lines = (result.lines || []).map((l: any, i: number) => {
-    const m = suggestMatch(l, vendor, (ings || []) as any, (aliases || []) as any);
-    return {
-      invoice_id: invoiceId, restaurant_id: restaurantId, position: i, description: l.description || "", product_code: l.product_code,
-      quantity: l.quantity, pack_count: l.pack_count, pack_size: l.pack_size, pack_unit: l.pack_unit, unit_price: l.unit_price, line_total: l.line_total,
-      uncertain: !!l.uncertain, uncertain_note: l.uncertain_note,
-      match_status: m ? "suggested" : "unmatched", ingredient_id: m?.ingredient_id ?? null, match_confidence: m?.confidence ?? null, match_reason: m?.reason ?? null,
-    };
-  });
-  if (lines.length) {
-    const inserted = await supabase.from("invoice_lines").insert(lines);
-    if (inserted.error) throw new Error(inserted.error.message);
-  }
-  const finished = await supabase.from("invoices").update({
-    status: "review", vendor_name: vendor, invoice_number: result.invoice_number, invoice_date: result.invoice_date,
-    doc_type: result.doc_type || "invoice", subtotal: result.subtotal, discount: result.discount, tax: result.tax,
-    delivery: result.delivery, total: result.total, uncertain_fields: result.uncertain_fields || [],
-  }).eq("id", invoiceId);
-  if (finished.error) throw new Error(finished.error.message);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not read this document";
-    await supabase.from("invoices").update({ status: "failed", extraction_error: message }).eq("id", invoiceId);
-    throw error;
-  }
+  await extractSupplierInvoice(invoiceId);
 }
 
 const Invoices = () => {
   const { user } = useAuth();
-  const { restaurant, locations } = useRestaurant();
+  const { restaurant, locations, canManage } = useRestaurant();
   const navigate = useNavigate();
   const [rows, setRows] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
@@ -84,17 +45,22 @@ const Invoices = () => {
       const hash = (await Promise.all(list.map(sha256))).join(":");
       const dup = rows.find((r) => r.file_hash === hash);
       if (dup && !confirm(`This exact file was already uploaded (${dup.vendor_name || "invoice"} ${dup.invoice_number || ""}). Upload anyway?`)) return;
-      const { data: inv, error } = await supabase.from("invoices").insert({ restaurant_id: restaurant.id, uploaded_by: user.id, file_hash: hash, location_id: uploadLoc || null }).select().single();
-      if (error || !inv) throw error;
+      const uploadId = crypto.randomUUID();
       const paths: string[] = [];
       for (const [i, f] of list.entries()) {
         const ext = f.name.split(".").pop() || "jpg";
-        const path = `${restaurant.id}/invoices/${inv.id}/${i + 1}.${ext}`;
+        const path = `${restaurant.id}/invoices/${uploadId}/${i + 1}.${ext}`;
         const { error: ue } = await supabase.storage.from("documents").upload(path, f, { contentType: f.type });
         if (ue) throw ue;
         paths.push(path);
       }
-      await supabase.from("invoices").update({ file_paths: paths }).eq("id", inv.id);
+      const { data: inv, error } = await supabase.from("invoices").insert({ restaurant_id: restaurant.id, uploaded_by: user.id, file_hash: hash, location_id: uploadLoc || null, file_paths: paths }).select().single();
+      if (error || !inv) throw error;
+      if (!canManage) {
+        toast.success("Captured securely. An owner or manager will review and approve this invoice.");
+        await load();
+        return;
+      }
       toast.message("Uploaded. Reading the document…");
       try { await runExtraction(inv.id, restaurant.id, paths); toast.success("Ready for review"); }
       catch (e: any) { toast.error(e.message); }

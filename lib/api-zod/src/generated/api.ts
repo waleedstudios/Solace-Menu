@@ -9,6 +9,42 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Atomically approve a reviewed invoice and update shared ingredient prices
+ */
+export const ApproveSupplierInvoiceParams = zod.object({
+  "invoiceId": zod.coerce.string().uuid()
+})
+
+export const approveSupplierInvoiceBodyAcceptTotalMismatchDefault = false;
+
+export const ApproveSupplierInvoiceBody = zod.object({
+  "accept_total_mismatch": zod.boolean().default(approveSupplierInvoiceBodyAcceptTotalMismatchDefault)
+})
+
+export const ApproveSupplierInvoiceResponse = zod.object({
+  "already_approved": zod.boolean(),
+  "changes": zod.array(zod.object({
+  "ingredient_id": zod.string().uuid(),
+  "prev": zod.number().nullable(),
+  "next": zod.number().nullable(),
+  "becameCurrent": zod.boolean()
+}))
+})
+
+
+/**
+ * @summary Read private invoice documents and atomically save extracted lines with match suggestions
+ */
+export const ExtractSupplierInvoiceParams = zod.object({
+  "invoiceId": zod.coerce.string().uuid()
+})
+
+export const ExtractSupplierInvoiceResponse = zod.object({
+  "status": zod.enum(['review'])
+})
+
+
+/**
  * @summary Find restaurants with published menus, without exposing private business records
  */
 export const discoverRestaurantsQueryQMax = 100;

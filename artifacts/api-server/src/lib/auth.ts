@@ -75,13 +75,13 @@ async function findOrCreateIdentity(clerkId: string): Promise<LocalUser> {
   } finally { client.release(); }
 }
 
-export async function memberRole(userId: string, restaurantId: string): Promise<string | null> {
-  const result = await pool.query(`SELECT role FROM restaurant_members WHERE user_id = $1 AND restaurant_id = $2
+export async function memberRole(userId: string, restaurantId: string, database: Pick<typeof pool, "query"> = pool): Promise<string | null> {
+  const result = await database.query(`SELECT role FROM restaurant_members WHERE user_id = $1 AND restaurant_id = $2
     AND NOT EXISTS (SELECT 1 FROM restaurants r JOIN account_deletions d ON d.user_id = r.owner_id WHERE r.id = $2)`, [userId, restaurantId]);
   return result.rows[0]?.role ?? null;
 }
-export async function authorizeRestaurant(userId: string, restaurantId: string, manage = false, owner = false): Promise<string> {
-  const role = await memberRole(userId, restaurantId);
+export async function authorizeRestaurant(userId: string, restaurantId: string, manage = false, owner = false, database: Pick<typeof pool, "query"> = pool): Promise<string> {
+  const role = await memberRole(userId, restaurantId, database);
   if (!role || (manage && role === "staff") || (owner && role !== "owner")) throw new HttpError(403, "You don't have permission for this restaurant.");
   return role;
 }

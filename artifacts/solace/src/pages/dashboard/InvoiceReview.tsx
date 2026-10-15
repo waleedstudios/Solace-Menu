@@ -56,11 +56,19 @@ const InvoiceReview = () => {
   };
   useEffect(() => { load(); }, [id, restaurant?.id]);
 
-  const locked = inv?.status === "approved";
-  const saveInv = async (patch: any) => { setInv({ ...inv, ...patch }); await supabase.from("invoices").update(patch).eq("id", inv.id); };
+  const locked = inv?.status === "approved" || inv?.status === "extracting" || !canManage;
+  const [saving, setSaving] = useState(0);
+  const saveInv = async (patch: any) => {
+    setSaving(n => n + 1);
+    const { error } = await supabase.from("invoices").update(patch).eq("id", inv.id);
+    if (error) toast.error(error.message); else setInv((old: any) => ({ ...old, ...patch }));
+    setSaving(n => n - 1);
+  };
   const saveLine = async (lid: string, patch: Partial<InvLine>) => {
-    setLines((ls) => ls.map((l) => (l.id === lid ? { ...l, ...patch } : l)));
-    await supabase.from("invoice_lines").update(patch as any).eq("id", lid);
+    setSaving(n => n + 1);
+    const { error } = await supabase.from("invoice_lines").update(patch as any).eq("id", lid);
+    if (error) toast.error(error.message); else setLines(ls => ls.map(l => l.id === lid ? { ...l, ...patch } : l));
+    setSaving(n => n - 1);
   };
   const check = useMemo(() => (inv ? totalsCheck(inv, lines) : null), [inv, lines]);
   const unc = new Set<string>(inv?.uncertain_fields || []);
@@ -82,8 +90,9 @@ const InvoiceReview = () => {
     if (!user || !restaurant) return;
     if (check?.issues.length && !confirm(`Totals don't reconcile:\n${check.issues.join("\n")}\n\nApprove anyway?`)) return;
     setBusy(true);
+    try {
     const ctxBefore = await loadCostCtx(restaurant.id);
-    const r = await approveInvoice(inv, lines, ings, user.id);
+    const r = await approveInvoice(inv.id, !!check?.issues.length);
     if (!r.ok) { setBusy(false); return toast.error(r.errors.join(" · ")); }
     const ctxAfter = await loadCostCtx(restaurant.id);
     const affected = new Set<string>();
@@ -95,7 +104,9 @@ const InvoiceReview = () => {
     setResult({ changes: r.changes, effects });
     setBusy(false);
     toast.success("Approved. Price history updated.");
-    load();
+    await load();
+    } catch (error: any) { toast.error(error?.message || "Could not complete approval. Reload and try again."); }
+    finally { setBusy(false); }
   };
 
   const rerun = async () => {
@@ -103,6 +114,17 @@ const InvoiceReview = () => {
     setBusy(true);
     try { await runExtraction(inv.id, restaurant!.id, inv.file_paths, inv.vendor_name); toast.success("Re-read complete"); } catch (e: any) { toast.error(e.message); }
     setBusy(false); load();
+  };
+
+  const saveManualReview = async () => {
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("invoices").update({ status: "review", extraction_error: null }).eq("id", inv.id);
+      if (error) throw new Error(error.message);
+      await load();
+      toast.success("Manual review saved. Prices have not changed.");
+    } catch (error: any) { toast.error(error?.message || "Could not save review."); }
+    finally { setBusy(false); }
   };
 
   const remove = async () => {
@@ -129,11 +151,12 @@ const InvoiceReview = () => {
         </div>
         <div className="flex gap-2">
           {canManage && !locked && <Button variant="outline" onClick={remove} disabled={busy}><Trash2 /> Delete</Button>}
-          {!locked && <Button variant="outline" onClick={rerun} disabled={busy}><RefreshCw /> Re-read</Button>}
-          {canManage && !locked && <Button onClick={approve} disabled={busy || inv.status !== "review"}>{busy ? <Loader2 className="animate-spin" /> : <CheckCircle2 />} Approve & update prices</Button>}
+          {canManage && !locked && <Button variant="outline" onClick={rerun} disabled={busy || !!saving}><RefreshCw /> Re-read</Button>}
+          {canManage && !locked && inv.status !== "review" && <Button variant="outline" onClick={saveManualReview} disabled={busy || !!saving || !lines.length}>Save manual review</Button>}
+          {canManage && !locked && <Button onClick={approve} disabled={busy || !!saving || inv.status !== "review"}>{busy ? <Loader2 className="animate-spin" /> : <CheckCircle2 />} Approve & update prices</Button>}
         </div>
       </div>
-      {!canManage && !locked && <p className="text-sm text-muted-foreground">A manager or owner will review and approve this invoice.</p>}
+      {!canManage && inv.status !== "approved" && <p className="text-sm text-muted-foreground">A manager or owner will review and approve this invoice.</p>}
       {inv.extraction_error && <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm">{inv.extraction_error}. You can re-read or enter the details manually.</div>}
       {dupes.length > 0 && (
         <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 p-4 text-sm flex gap-2"><AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />

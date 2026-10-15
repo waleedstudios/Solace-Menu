@@ -10,16 +10,13 @@ const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
-router.post("/extract-document", async (req, res): Promise<void> => {
-  const user = (await localUser(req))!;
-  const parsed = ExtractDocumentBody.safeParse(req.body);
-  if (!parsed.success) throw new HttpError(400, "Choose up to 10 documents.");
-  const { kind, restaurant_id, paths } = parsed.data;
-  await authorizeRestaurant(user.id, restaurant_id, kind !== "invoice");
+export async function extractPrivateDocument(userId: string, input: { kind: "invoice" | "label" | "menu"; restaurant_id: string; paths: string[] }) {
+  const { kind, restaurant_id, paths } = input;
+  await authorizeRestaurant(userId, restaurant_id, true);
   const content: any[] = [{ type: "input_text", text: extractionPrompts[kind] }];
   let totalSize = 0;
   for (const path of paths) {
-    const record = await authorizedDocument(user.id, path);
+    const record = await authorizedDocument(userId, path);
     if (record.restaurant_id !== restaurant_id) throw new HttpError(403, "The document belongs to another restaurant.");
     totalSize += record.size;
     if (totalSize > 52428800) throw new HttpError(400, "Use documents totaling no more than 50 MB.");
@@ -37,13 +34,18 @@ router.post("/extract-document", async (req, res): Promise<void> => {
       text: { format: { type: "json_schema", name: "record", strict: true, schema: extractionSchemas[kind] } },
     });
     if (!response.output_text) throw new HttpError(422, "Nothing could be extracted.");
-    res.json(ExtractDocumentResponse.parse({ data: JSON.parse(response.output_text) }));
+    return ExtractDocumentResponse.parse({ data: JSON.parse(response.output_text) });
   } catch (error) {
     if (error instanceof HttpError) throw error;
     if (error instanceof OpenAI.APIError && error.status === 429) throw new HttpError(429, "AI is busy. Try again in a minute.");
     if (error instanceof OpenAI.APIError && error.status === 402) throw new HttpError(402, "AI credits are exhausted.");
-    req.log.error({ err: error }, "Document extraction failed");
     throw new HttpError(502, "Document extraction failed. Please try again.");
   }
+}
+router.post("/extract-document", async (req, res): Promise<void> => {
+  const user = (await localUser(req))!;
+  const parsed = ExtractDocumentBody.safeParse(req.body);
+  if (!parsed.success) throw new HttpError(400, "Choose up to 10 documents.");
+  res.json(await extractPrivateDocument(user.id, parsed.data));
 });
 export default router;
