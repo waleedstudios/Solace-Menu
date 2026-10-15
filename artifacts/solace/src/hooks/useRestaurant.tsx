@@ -1,6 +1,6 @@
 import type React from "react";
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { dataApi as supabase } from "@/lib/data";
 import { useAuth } from "./useAuth";
 import { computeRecipe, type Ctx, type CostIngredient, type CostLine, type CostRecipe } from "@/lib/costing";
 
@@ -11,26 +11,28 @@ type Value = {
   restaurant: Restaurant | null; role: Role | null; locations: Location[];
   canManage: boolean; isOwner: boolean; loading: boolean; reload: () => void;
   memberships: { restaurant_id: string; role: Role; name: string }[]; switchTo: (id: string) => void;
+  error: string | null;
 };
 // Keep one context instance across hot reloads so provider and consumers never mismatch.
 const C: React.Context<Value | null> = ((globalThis as any).__solaceRestaurantCtx ??= createContext<Value | null>(null));
 
 export function RestaurantProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [state, setState] = useState<Omit<Value, "reload" | "switchTo" | "canManage" | "isOwner">>({ restaurant: null, role: null, locations: [], loading: true, memberships: [] });
+  const [state, setState] = useState<Omit<Value, "reload" | "switchTo" | "canManage" | "isOwner">>({ restaurant: null, role: null, locations: [], loading: true, memberships: [], error: null });
   const [activeId, setActiveId] = useState<string | null>(() => localStorage.getItem("solace-restaurant"));
 
   const load = useCallback(async () => {
     if (!user) return;
-    const { data: mem } = await supabase.from("restaurant_members").select("restaurant_id, role, restaurants(name)").eq("user_id", user.id);
+    const { data: mem, error } = await supabase.from("restaurant_members").select("restaurant_id, role, restaurants(name)").eq("user_id", user.id);
+    if (error) { setState({ restaurant: null, role: null, locations: [], loading: false, memberships: [], error: error.message }); return; }
     const memberships = (mem || []).map((m: any) => ({ restaurant_id: m.restaurant_id, role: m.role, name: m.restaurants?.name ?? "Restaurant" }));
     const pick = memberships.find((m) => m.restaurant_id === activeId) || memberships[0];
-    if (!pick) { setState({ restaurant: null, role: null, locations: [], loading: false, memberships }); return; }
-    const [{ data: r }, { data: locs }] = await Promise.all([
+    if (!pick) { setState({ restaurant: null, role: null, locations: [], loading: false, memberships, error: null }); return; }
+    const [{ data: r, error: restaurantError }, { data: locs, error: locationError }] = await Promise.all([
       supabase.from("restaurants").select("id, name, price_alert_threshold_pct, invoice_retention_days").eq("id", pick.restaurant_id).maybeSingle(),
       supabase.from("locations").select("id, name").eq("restaurant_id", pick.restaurant_id).order("created_at"),
     ]);
-    setState({ restaurant: r as any, role: pick.role, locations: locs || [], loading: false, memberships });
+    setState({ restaurant: r as any, role: pick.role, locations: locs || [], loading: false, memberships, error: restaurantError?.message || locationError?.message || null });
   }, [user, activeId]);
 
   useEffect(() => { load(); }, [load]);

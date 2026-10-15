@@ -1,0 +1,1 @@
+- [Migration scope](migration-scope.md) — the user selected the full app port, not a frontend-only copy that retains the old backend.

@@ -2,7 +2,8 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { RestaurantProvider, useRestaurant } from "@/hooks/useRestaurant";
-import { supabase } from "@/integrations/supabase/client";
+import { dataApi as supabase } from "@/lib/data";
+import { useClerk } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, LayoutGrid, Carrot, Ruler, ExternalLink, LogOut, ScanLine, BookOpen, BarChart3, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -11,8 +12,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Shell = () => {
   const navigate = useNavigate();
+  const { signOut: clerkSignOut } = useClerk();
   const { user } = useAuth();
-  const { restaurant, role, canManage, loading, memberships, switchTo } = useRestaurant();
+  const { restaurant, role, canManage, loading, memberships, switchTo, error } = useRestaurant();
   const [slug, setSlug] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ const Shell = () => {
     supabase.from("profiles").select("slug").eq("id", user.id).maybeSingle().then(({ data }) => setSlug(data?.slug ?? null));
   }, [user]);
 
-  const signOut = async () => { await supabase.auth.signOut(); toast.success("Signed out"); navigate("/"); };
+  const signOut = async () => { await clerkSignOut(); toast.success("Signed out"); navigate("/"); };
   const navCls = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors whitespace-nowrap ${isActive ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary"}`;
 
@@ -67,7 +69,7 @@ const Shell = () => {
           </nav>
         </aside>
         <main className="min-w-0">
-          {loading ? <p className="text-muted-foreground">Loading…</p> : !restaurant ? (
+          {loading ? <p className="text-muted-foreground">Loading…</p> : error ? <p role="alert" className="text-destructive">{error}</p> : !restaurant ? (
             <div className="rounded-2xl border border-border bg-card p-8 text-center">
               <p className="font-display text-2xl mb-2">No workspace yet</p>
               <p className="text-sm text-muted-foreground">Ask a restaurant owner to add your email to their team.</p>
@@ -80,9 +82,10 @@ const Shell = () => {
 };
 
 const DashboardLayout = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, error } = useAuth();
   const navigate = useNavigate();
-  useEffect(() => { if (!loading && !user) navigate("/auth", { replace: true }); }, [user, loading, navigate]);
+  useEffect(() => { if (!loading && !user && !error) navigate("/auth", { replace: true }); }, [user, loading, error, navigate]);
+  if (error) return <div className="min-h-screen flex flex-col gap-3 items-center justify-center text-destructive"><p role="alert">{error}</p><button className="underline" onClick={() => window.location.reload()}>Retry</button></div>;
   if (loading || !user) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
   return <RestaurantProvider><Shell /></RestaurantProvider>;
 };

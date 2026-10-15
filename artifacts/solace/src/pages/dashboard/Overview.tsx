@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { dataApi as supabase } from "@/lib/data";
 import { useRestaurant, loadCostCtx } from "@/hooks/useRestaurant";
 import { Badge } from "@/components/ui/badge";
 import { computeRecipe, recipesUsing } from "@/lib/costing";

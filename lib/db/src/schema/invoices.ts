@@ -1,0 +1,68 @@
+import { pgTable, uuid, text, timestamp, doublePrecision, boolean, integer } from "drizzle-orm/pg-core";
+import { authUsers, restaurants, locations } from "./restaurants";
+import { ingredients, vendors } from "./inventory";
+
+export const invoices = pgTable("invoices", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  restaurant_id: uuid("restaurant_id").notNull().references(() => restaurants.id, { onDelete: "cascade" }),
+  location_id: uuid("location_id").references(() => locations.id, { onDelete: "set null" }),
+  vendor_id: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+  vendor_name: text("vendor_name"),
+  invoice_number: text("invoice_number"),
+  invoice_date: text("invoice_date"),
+  doc_type: text("doc_type").default("invoice").notNull(),
+  status: text("status").default("uploaded").notNull(),
+  subtotal: doublePrecision("subtotal"),
+  discount: doublePrecision("discount"),
+  tax: doublePrecision("tax"),
+  delivery: doublePrecision("delivery"),
+  total: doublePrecision("total"),
+  uncertain_fields: text("uncertain_fields").array().default([]).notNull(),
+  file_paths: text("file_paths").array().default([]).notNull(),
+  file_hash: text("file_hash"),
+  extraction_error: text("extraction_error"),
+  corrects_invoice_id: uuid("corrects_invoice_id"),
+  approved_at: timestamp("approved_at", { withTimezone: true }),
+  approved_by: uuid("approved_by").references(() => authUsers.id, { onDelete: "set null" }),
+  uploaded_by: uuid("uploaded_by").references(() => authUsers.id, { onDelete: "set null" }),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const invoiceLines = pgTable("invoice_lines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  invoice_id: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+  restaurant_id: uuid("restaurant_id").notNull().references(() => restaurants.id, { onDelete: "cascade" }),
+  ingredient_id: uuid("ingredient_id").references(() => ingredients.id, { onDelete: "set null" }),
+  description: text("description").default("").notNull(),
+  product_code: text("product_code"),
+  quantity: doublePrecision("quantity"),
+  pack_count: doublePrecision("pack_count"),
+  pack_size: doublePrecision("pack_size"),
+  pack_unit: text("pack_unit"),
+  unit_price: doublePrecision("unit_price"),
+  line_total: doublePrecision("line_total"),
+  match_status: text("match_status").default("unmatched").notNull(),
+  match_confidence: doublePrecision("match_confidence"),
+  match_reason: text("match_reason"),
+  uncertain: boolean("uncertain").default(false).notNull(),
+  uncertain_note: text("uncertain_note"),
+  position: integer("position").default(0).notNull(),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const priceHistory = pgTable("price_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  restaurant_id: uuid("restaurant_id").notNull().references(() => restaurants.id, { onDelete: "cascade" }),
+  ingredient_id: uuid("ingredient_id").notNull().references(() => ingredients.id, { onDelete: "cascade" }),
+  invoice_id: uuid("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+  invoice_line_id: uuid("invoice_line_id").references(() => invoiceLines.id, { onDelete: "set null" }),
+  location_id: uuid("location_id").references(() => locations.id, { onDelete: "set null" }),
+  vendor_name: text("vendor_name"),
+  invoice_date: text("invoice_date").notNull(),
+  cost_per_base: doublePrecision("cost_per_base").notNull(),
+  base_unit: text("base_unit").notNull(),
+  pack_base_qty: doublePrecision("pack_base_qty"),
+  pack_description: text("pack_description"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});

@@ -1,5 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useNavigate } from "react-router-dom";
+import { ClerkProvider } from "@clerk/react";
+import { publishableKeyFromHost } from "@clerk/react/internal";
+import { LocalAuthProvider, useAuth } from "./hooks/useAuth";
+import { type ReactNode } from "react";
+import solaceLogo from "./assets/solace-logo.png";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,16 +26,58 @@ import PublicMenu from "./pages/PublicMenu";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+
+function AuthProviders({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  const relative = (path: string) => basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path;
+  return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl}
+    routerPush={(path) => navigate(relative(path))}
+    routerReplace={(path) => navigate(relative(path), { replace: true })}
+    signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`}
+    appearance={{
+      options: { logoImageUrl: new URL(solaceLogo, window.location.origin).href, logoLinkUrl: basePath || "/", logoPlacement: "inside" },
+      variables: {
+        colorPrimary: "hsl(var(--primary))", colorForeground: "hsl(var(--foreground))",
+        colorMutedForeground: "hsl(var(--muted-foreground))", colorBackground: "hsl(var(--card))",
+        colorInput: "hsl(var(--background))", colorInputForeground: "hsl(var(--foreground))",
+        colorDanger: "hsl(var(--destructive))", fontFamily: "Inter, sans-serif", borderRadius: "12px",
+      },
+      elements: {
+        rootBox: "w-full", cardBox: "w-full max-w-md border border-border shadow-md-soft rounded-2xl bg-card",
+        card: "bg-transparent shadow-none", footer: "bg-transparent",
+        headerTitle: "text-foreground", headerSubtitle: "text-muted-foreground",
+        formFieldLabel: "text-foreground", formFieldInput: "text-foreground bg-background border-input",
+        footerActionText: "text-muted-foreground", footerActionLink: "text-primary",
+        socialButtonsBlockButtonText: "text-foreground", dividerText: "text-muted-foreground",
+      },
+    }}>
+    <LocalAuthProvider>{children}</LocalAuthProvider>
+  </ClerkProvider>;
+}
+
+function Home() {
+  const { user } = useAuth();
+  return user ? <Navigate to="/dashboard" replace /> : <Landing />;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter basename={basePath || "/"}>
+        <AuthProviders>
         <Routes>
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={<Home />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/sign-in/*" element={<Auth />} />
+          <Route path="/sign-up/*" element={<Auth />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Overview />} />
             <Route path="menu" element={<MenuItems />} />
@@ -48,6 +95,7 @@ const App = () => (
           <Route path="/restaurant/:slug" element={<PublicMenu />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </AuthProviders>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

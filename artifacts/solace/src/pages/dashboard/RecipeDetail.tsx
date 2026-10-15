@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { dataApi as supabase } from "@/lib/data";
 import { useAuth } from "@/hooks/useAuth";
 import { useRestaurant, loadCostCtx } from "@/hooks/useRestaurant";
 import { Button } from "@/components/ui/button";

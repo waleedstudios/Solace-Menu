@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { dataApi as supabase } from "@/lib/data";
 import { useAuth } from "@/hooks/useAuth";
 import { useRestaurant } from "@/hooks/useRestaurant";
 import { Button } from "@/components/ui/button";
@@ -12,20 +12,23 @@ import { sha256, STATUS_LABEL, DOC_LABEL, suggestMatch } from "@/lib/invoices";
 import { money } from "@/lib/units";
 
 export async function runExtraction(invoiceId: string, restaurantId: string, paths: string[], vendorHint?: string) {
-  await supabase.from("invoices").update({ status: "extracting", extraction_error: null }).eq("id", invoiceId);
+  try {
+  const started = await supabase.from("invoices").update({ status: "extracting", extraction_error: null }).eq("id", invoiceId);
+  if (started.error) throw new Error(started.error.message);
   const { data, error } = await supabase.functions.invoke("extract-document", { body: { kind: "invoice", restaurant_id: restaurantId, paths } });
   const result = (data as any)?.data;
   if (error || !result) {
-    const msg = (data as any)?.error || "Could not read this document";
-    await supabase.from("invoices").update({ status: "failed", extraction_error: msg }).eq("id", invoiceId);
+    const msg = error?.message || (data as any)?.error || "Could not read this document";
     throw new Error(msg);
   }
-  const [{ data: ings }, { data: aliases }] = await Promise.all([
+  const [{ data: ings, error: ingredientsError }, { data: aliases, error: aliasesError }] = await Promise.all([
     supabase.from("ingredients").select("id, name, brand, supplier_code, base_unit, pack_count, pack_size, pack_unit, density_g_per_ml, current_cost, current_cost_date").eq("restaurant_id", restaurantId),
     supabase.from("ingredient_aliases").select("ingredient_id, vendor_name, alias, product_code").eq("restaurant_id", restaurantId),
   ]);
+  if (ingredientsError || aliasesError) throw new Error(ingredientsError?.message || aliasesError?.message);
   const vendor = result.vendor_name || vendorHint || null;
-  await supabase.from("invoice_lines").delete().eq("invoice_id", invoiceId);
+  const cleared = await supabase.from("invoice_lines").delete().eq("invoice_id", invoiceId);
+  if (cleared.error) throw new Error(cleared.error.message);
   const lines = (result.lines || []).map((l: any, i: number) => {
     const m = suggestMatch(l, vendor, (ings || []) as any, (aliases || []) as any);
     return {
@@ -35,12 +38,21 @@ export async function runExtraction(invoiceId: string, restaurantId: string, pat
       match_status: m ? "suggested" : "unmatched", ingredient_id: m?.ingredient_id ?? null, match_confidence: m?.confidence ?? null, match_reason: m?.reason ?? null,
     };
   });
-  if (lines.length) await supabase.from("invoice_lines").insert(lines);
-  await supabase.from("invoices").update({
+  if (lines.length) {
+    const inserted = await supabase.from("invoice_lines").insert(lines);
+    if (inserted.error) throw new Error(inserted.error.message);
+  }
+  const finished = await supabase.from("invoices").update({
     status: "review", vendor_name: vendor, invoice_number: result.invoice_number, invoice_date: result.invoice_date,
     doc_type: result.doc_type || "invoice", subtotal: result.subtotal, discount: result.discount, tax: result.tax,
     delivery: result.delivery, total: result.total, uncertain_fields: result.uncertain_fields || [],
   }).eq("id", invoiceId);
+  if (finished.error) throw new Error(finished.error.message);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not read this document";
+    await supabase.from("invoices").update({ status: "failed", extraction_error: message }).eq("id", invoiceId);
+    throw error;
+  }
 }
 
 const Invoices = () => {

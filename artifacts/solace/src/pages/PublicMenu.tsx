@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { dataApi as supabase } from "@/lib/data";
 import { MacroBadges } from "@/components/MacroBadges";
 import { totalMacros, type Ingredient, type PortionUnit, type RecipeItem } from "@/lib/macros";
 

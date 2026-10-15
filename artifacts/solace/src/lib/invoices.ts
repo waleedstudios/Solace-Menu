@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { dataApi as supabase } from "@/lib/data";
 import { isUnit, UNITS, toBase, describePack } from "./units";
 
 export type InvLine = {

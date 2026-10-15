@@ -24,6 +24,186 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /me:
+    get:
+      operationId: getCurrentUser
+      summary: Resolve the signed-in Clerk account to its local app identity
+      responses:
+        "200":
+          description: Local account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalUser"
+        "401":
+          description: Not signed in
+  /data/query:
+    post:
+      operationId: queryData
+      summary: Query or mutate the restaurant data used by the imported app
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataRequest"
+      responses:
+        "200":
+          description: Query result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataResult"
+        "400":
+          description: Invalid query
+        "401":
+          description: Not signed in
+        "403":
+          description: Not authorized for this restaurant
+  /data/rpc:
+    post:
+      operationId: callDataFunction
+      summary: Publish a public menu or add an existing account to a restaurant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FunctionInput"
+      responses:
+        "200":
+          description: Function result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataResult"
+        "400":
+          description: Invalid request
+        "403":
+          description: Forbidden
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      summary: Request a private restaurant document upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadInput"
+      responses:
+        "200":
+          description: Upload destination
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadDestination"
+        "401":
+          description: Not signed in
+        "403":
+          description: Forbidden
+  /storage/uploads/complete:
+    post:
+      operationId: completeUpload
+      summary: Confirm an uploaded document exists
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentInput"
+      responses:
+        "200":
+          description: Upload complete
+        "404":
+          description: File missing
+  /storage/documents/url:
+    post:
+      operationId: getDocumentUrl
+      summary: Get an authenticated browser URL for a restaurant document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentInput"
+      responses:
+        "200":
+          description: Document URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentUrl"
+        "403":
+          description: Forbidden
+  /storage/documents/remove:
+    post:
+      operationId: removeDocuments
+      summary: Remove private restaurant documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentsInput"
+      responses:
+        "200":
+          description: Removed
+        "403":
+          description: Forbidden
+  /storage/documents/{fileId}:
+    get:
+      operationId: getDocument
+      summary: Stream a private restaurant document
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Document content
+        "403":
+          description: Forbidden
+        "404":
+          description: Missing document
+  /storage/public-objects/{filePath}:
+    get:
+      operationId: getPublicStorageObject
+      summary: Stream a public App Storage asset
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Asset content
+        "404":
+          description: Missing asset
+  /extract-document:
+    post:
+      operationId: extractDocument
+      summary: Extract the printed contents of invoices, menus, and nutrition labels
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExtractionInput"
+      responses:
+        "200":
+          description: Extracted record, with uncertainty preserved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtractionResult"
+        "400":
+          description: Invalid document request
+        "403":
+          description: Forbidden
+        "429":
+          description: AI temporarily unavailable
 components:
   schemas:
     HealthStatus:
@@ -33,4 +213,112 @@ components:
           type: string
       required:
         - status
+    LocalUser:
+      type: object
+      required: [id, email]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+    DataRequest:
+      type: object
+      required: [table, operation]
+      properties:
+        table:
+          type: string
+          enum: [profiles, restaurants, restaurant_members, locations, ingredients, ingredient_aliases, portion_units, menu_items, recipe_items, recipes, recipe_lines, recipe_versions, invoices, invoice_lines, price_history, sales_imports, sales_lines, sales_mappings, vendors]
+        operation:
+          type: string
+          enum: [select, insert, update, delete, upsert]
+        selection: { type: string, maxLength: 1000 }
+        filters:
+          type: array
+          maxItems: 30
+          items:
+            $ref: "#/components/schemas/DataFilter"
+        orders:
+          type: array
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/DataOrder"
+        limit: { type: integer, minimum: 1, maximum: 20000 }
+        single: { type: string, enum: [single, maybeSingle] }
+        payload: {}
+        onConflict: { type: string }
+    DataFilter:
+      type: object
+      required: [column, operator, value]
+      properties:
+        column: { type: string }
+        operator: { type: string, enum: [eq, neq, in] }
+        value: {}
+    DataOrder:
+      type: object
+      required: [column]
+      properties:
+        column: { type: string }
+        ascending: { type: boolean }
+        nullsFirst: { type: boolean }
+    DataResult:
+      type: object
+      required: [data, error]
+      properties:
+        data: {}
+        error:
+          type: [object, "null"]
+          properties:
+            message: { type: string }
+    FunctionInput:
+      type: object
+      required: [name, args]
+      properties:
+        name: { type: string, enum: [get_public_menu, add_member_by_email] }
+        args: { type: object, additionalProperties: true }
+    UploadInput:
+      type: object
+      required: [logicalPath, name, size, contentType]
+      properties:
+        logicalPath: { type: string, minLength: 1, maxLength: 500 }
+        name: { type: string, minLength: 1, maxLength: 255 }
+        size: { type: integer, minimum: 1, maximum: 20971520 }
+        contentType: { type: string, enum: [application/pdf, image/jpeg, image/png, image/webp] }
+    UploadDestination:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL: { type: string }
+        objectPath: { type: string }
+    DocumentInput:
+      type: object
+      required: [path]
+      properties:
+        path: { type: string, minLength: 1, maxLength: 500 }
+    DocumentsInput:
+      type: object
+      required: [paths]
+      properties:
+        paths:
+          type: array
+          maxItems: 100
+          items: { type: string, maxLength: 500 }
+    DocumentUrl:
+      type: object
+      required: [signedUrl]
+      properties:
+        signedUrl: { type: string }
+    ExtractionInput:
+      type: object
+      required: [kind, restaurant_id, paths]
+      properties:
+        kind: { type: string, enum: [invoice, label, menu] }
+        restaurant_id: { type: string, format: uuid }
+        paths:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items: { type: string, maxLength: 500 }
+    ExtractionResult:
+      type: object
+      required: [data]
+      properties:
+        data: { type: object, additionalProperties: true }
 
