@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './accountDeletionRequest';
+export * from './accountDeletionRequestConfirmation';
 export * from './businessDetails';
 export * from './dataFilter';
 export * from './dataFilterOperator';
@@ -16,6 +18,11 @@ export * from './dataRequestSingle';
 export * from './dataRequestTable';
 export * from './dataResult';
 export * from './dataResultError';
+export * from './deleteAccount200';
+export * from './deleteAccount200Status';
+export * from './discoverRestaurants200';
+export * from './discoverRestaurants200RestaurantsItem';
+export * from './discoverRestaurantsParams';
 export * from './documentInput';
 export * from './documentsInput';
 export * from './documentUrl';

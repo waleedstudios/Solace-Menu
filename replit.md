@@ -6,6 +6,7 @@ Solace helps restaurants manage ingredient nutrition and costs, build recipes, p
 
 - Managed workflow `artifacts/api-server: API Server` — Express API under `/api`
 - Managed workflow `artifacts/solace: web` — React app at `/`
+- Managed workflow `artifacts/solace-mobile: expo` — native customer/restaurant companion; Expo preview uses its separate development domain
 - Managed workflows inject `PORT` and `BASE_PATH`; use them rather than starting duplicate servers.
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
@@ -54,6 +55,8 @@ Solace helps restaurants manage ingredient nutrition and costs, build recipes, p
 - Legacy menu editor plus recipe-based public menus at `/r/:slug` and `/restaurant/:slug`
 - Invoice upload, AI extraction, line matching, approval, and ingredient price history
 - Sales import and recipe mapping, restaurant locations, team membership, settings
+- Native companion: customer discovery/saved menus/QR scanning and business onboarding, kitchen recipes, ingredients, menu publication, invoice photo capture, and account deletion. Advanced invoice review and sales/team administration remain on the website.
+- Mobile release requirements are in `artifacts/solace-mobile/APP_STORE_CHECKLIST.md`. Native uses Clerk bearer tokens; the website retains cookie sessions. Both use the same backend and recipe engine.
 
 ## Migration boundaries
 

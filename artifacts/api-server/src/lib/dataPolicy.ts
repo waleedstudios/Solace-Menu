@@ -9,8 +9,9 @@ export function accessClause(table: TableName, userId: string | null, write: boo
   if (table === "profiles" && !write) return "TRUE";
   const p = (value: unknown) => { params.push(value); return `$${params.length}`; };
   const uid = userId ? p(userId) : "NULL";
-  const member = (rid: string, owner = false) => `EXISTS (SELECT 1 FROM restaurant_members rm WHERE rm.restaurant_id = ${rid} AND rm.user_id = ${uid}${write ? ` AND rm.role ${owner ? "= 'owner'" : "IN ('owner','manager')"}` : ""})`;
-  const anyMember = (rid: string) => `EXISTS (SELECT 1 FROM restaurant_members rm WHERE rm.restaurant_id = ${rid} AND rm.user_id = ${uid})`;
+  const active = (rid: string) => `NOT EXISTS (SELECT 1 FROM restaurants ar JOIN account_deletions ad ON ad.user_id = ar.owner_id WHERE ar.id = ${rid})`;
+  const member = (rid: string, owner = false) => `(${active(rid)} AND EXISTS (SELECT 1 FROM restaurant_members rm WHERE rm.restaurant_id = ${rid} AND rm.user_id = ${uid}${write ? ` AND rm.role ${owner ? "= 'owner'" : "IN ('owner','manager')"}` : ""}))`;
+  const anyMember = (rid: string) => `(${active(rid)} AND EXISTS (SELECT 1 FROM restaurant_members rm WHERE rm.restaurant_id = ${rid} AND rm.user_id = ${uid}))`;
   switch (table) {
     case "profiles": return write ? `t.id = ${uid}` : "TRUE";
     case "restaurants": return member("t.id", true);

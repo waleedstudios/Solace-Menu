@@ -20,6 +20,9 @@ router.post("/storage/uploads/request-url", async (req, res): Promise<void> => {
   await authorizeRestaurant(user.id, restaurantId);
   if ((await pool.query("SELECT 1 FROM stored_files WHERE logical_path = $1", [logicalPath])).rowCount) throw new HttpError(409, "A document already exists at this path.");
   const uploadURL = await documentStorage.getObjectEntityUploadURL();
+  // Recheck after signing: a deletion requested while storage was responding
+  // must not issue a fresh upload link for a frozen business.
+  await authorizeRestaurant(user.id, restaurantId);
   const objectPath = documentStorage.normalizeObjectEntityPath(uploadURL);
   await pool.query(`INSERT INTO stored_files (logical_path, object_path, restaurant_id, uploaded_by, content_type, name, size)
     VALUES ($1, $2, $3, $4, $5, $6, $7)`, [logicalPath, objectPath, restaurantId, user.id, contentType, name, size]);

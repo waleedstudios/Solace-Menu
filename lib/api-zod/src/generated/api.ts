@@ -9,6 +9,38 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Find restaurants with published menus, without exposing private business records
+ */
+export const discoverRestaurantsQueryQMax = 100;
+
+
+
+export const DiscoverRestaurantsQueryParams = zod.object({
+  "q": zod.coerce.string().max(discoverRestaurantsQueryQMax).optional()
+})
+
+export const DiscoverRestaurantsResponse = zod.object({
+  "restaurants": zod.array(zod.object({
+  "name": zod.string(),
+  "slug": zod.string(),
+  "item_count": zod.number().int()
+}))
+})
+
+
+/**
+ * @summary Permanently delete the signed-in account and its owned businesses
+ */
+export const DeleteAccountBody = zod.object({
+  "confirmation": zod.enum(['DELETE'])
+})
+
+export const DeleteAccountResponse = zod.object({
+  "status": zod.enum(['deleted', 'pending'])
+})
+
+
+/**
  * @summary Public dishes and live per-serving nutrition only
  */
 export const getPublicMenuPathSlugMax = 200;

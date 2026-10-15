@@ -9,6 +9,12 @@ export const authUsers = pgTable("auth_users", {
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const accountDeletions = pgTable("account_deletions", {
+  clerk_id: text("clerk_id").primaryKey(),
+  user_id: uuid("user_id").notNull(),
+  requested_at: timestamp("requested_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().references(() => authUsers.id, { onDelete: "cascade" }),
   restaurant_name: text("restaurant_name").notNull(),

@@ -5,6 +5,17 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type AccountDeletionRequestConfirmation = typeof AccountDeletionRequestConfirmation[keyof typeof AccountDeletionRequestConfirmation];
+
+
+export const AccountDeletionRequestConfirmation = {
+  DELETE: 'DELETE',
+} as const;
+
+export interface AccountDeletionRequest {
+  confirmation: AccountDeletionRequestConfirmation;
+}
+
 export interface MenuNutrition {
   /** @minimum 0 */
   calories: number;
@@ -292,4 +303,33 @@ export type ExtractionResultData = { [key: string]: unknown };
 export interface ExtractionResult {
   data: ExtractionResultData;
 }
+
+export type DiscoverRestaurantsParams = {
+/**
+ * @maxLength 100
+ */
+q?: string;
+};
+
+export type DiscoverRestaurants200RestaurantsItem = {
+  name: string;
+  slug: string;
+  item_count: number;
+};
+
+export type DiscoverRestaurants200 = {
+  restaurants: DiscoverRestaurants200RestaurantsItem[];
+};
+
+export type DeleteAccount200Status = typeof DeleteAccount200Status[keyof typeof DeleteAccount200Status];
+
+
+export const DeleteAccount200Status = {
+  deleted: 'deleted',
+  pending: 'pending',
+} as const;
+
+export type DeleteAccount200 = {
+  status: DeleteAccount200Status;
+};
 

@@ -3,3 +3,5 @@
 - [Branding requirements](branding-requirements.md) — use the supplied SM/leaf logo and matching wordmark; account for scaled image previews when cropping.
 - [Recipe-to-menu behavior](recipe-menu-behavior.md) — menu items added under Recipes should automatically create and synchronize their public menu entries.
 - [Authentication query boundaries](auth-query-boundaries.md) — preserve guest menu queries during auth initialization and private-session cache resets.
+- [Mobile product scope](mobile-product-scope.md) — both customer and restaurant audiences; preserve the website and share its real backend.
+- [Expo SDK compatibility](expo-sdk-alignment.md) — align native modules with the active SDK, not stale example pins; keep supply-chain protections intact.

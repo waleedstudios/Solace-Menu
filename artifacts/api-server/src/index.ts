@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { initializeRecipeMenuSync } from "./lib/menu";
+import { initializeAccountDeletion } from "./lib/accountDeletion";
 
 const rawPort = process.env["PORT"];
 
@@ -17,6 +18,7 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 await initializeRecipeMenuSync();
+await initializeAccountDeletion();
 
 app.listen(port, (err) => {
   if (err) {

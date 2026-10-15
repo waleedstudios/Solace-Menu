@@ -11,6 +11,56 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /public/restaurants:
+    get:
+      operationId: discoverRestaurants
+      summary: Find restaurants with published menus, without exposing private business records
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 100 }
+      responses:
+        "200":
+          description: Public restaurant directory
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [restaurants]
+                properties:
+                  restaurants:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, slug, item_count]
+                      properties:
+                        name: { type: string }
+                        slug: { type: string }
+                        item_count: { type: integer }
+  /account:
+    delete:
+      operationId: deleteAccount
+      summary: Permanently delete the signed-in account and its owned businesses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountDeletionRequest"
+      responses:
+        "200":
+          description: Account deleted or durably queued for deletion
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [deleted, pending] }
+        "401":
+          description: Sign in first
+        "403":
+          description: Recent sign-in required
   /public-menu/{slug}:
     get:
       operationId: getPublicMenu
@@ -265,6 +315,11 @@ paths:
           description: AI temporarily unavailable
 components:
   schemas:
+    AccountDeletionRequest:
+      type: object
+      required: [confirmation]
+      properties:
+        confirmation: { type: string, enum: [DELETE] }
     MenuNutrition:
       type: object
       required: [calories, protein, carbs, fats]

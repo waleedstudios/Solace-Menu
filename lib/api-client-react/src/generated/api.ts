@@ -20,9 +20,13 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AccountDeletionRequest,
   BusinessDetails,
   DataRequest,
   DataResult,
+  DeleteAccount200,
+  DiscoverRestaurants200,
+  DiscoverRestaurantsParams,
   DocumentInput,
   DocumentUrl,
   DocumentsInput,
@@ -63,6 +67,178 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getDiscoverRestaurantsUrl = (params?: DiscoverRestaurantsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/public/restaurants?${stringifiedParams}` : `/api/public/restaurants`
+}
+
+/**
+ * @summary Find restaurants with published menus, without exposing private business records
+ */
+export const discoverRestaurants = async (params?: DiscoverRestaurantsParams, options?: Parameters<typeof customFetch>[1]): Promise<DiscoverRestaurants200> => {
+
+  return customFetch<DiscoverRestaurants200>(getDiscoverRestaurantsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDiscoverRestaurantsQueryKey = (params?: DiscoverRestaurantsParams,) => {
+    return [
+    `/api/public/restaurants`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getDiscoverRestaurantsQueryOptions = <TData = Awaited<ReturnType<typeof discoverRestaurants>>, TError = ErrorType<unknown>>(params?: DiscoverRestaurantsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof discoverRestaurants>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDiscoverRestaurantsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof discoverRestaurants>>> = ({ signal }) => discoverRestaurants(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof discoverRestaurants>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DiscoverRestaurantsQueryResult = NonNullable<Awaited<ReturnType<typeof discoverRestaurants>>>
+export type DiscoverRestaurantsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Find restaurants with published menus, without exposing private business records
+ */
+
+export function useDiscoverRestaurants<TData = Awaited<ReturnType<typeof discoverRestaurants>>, TError = ErrorType<unknown>>(
+ params?: DiscoverRestaurantsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof discoverRestaurants>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDiscoverRestaurantsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDeleteAccountUrl = () => {
+
+
+
+
+  return `/api/account`
+}
+
+/**
+ * @summary Permanently delete the signed-in account and its owned businesses
+ */
+export const deleteAccount = async (accountDeletionRequest: AccountDeletionRequest, options?: Parameters<typeof customFetch>[1]): Promise<DeleteAccount200> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<DeleteAccount200>(getDeleteAccountUrl(),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(accountDeletionRequest)
+  }
+);}
+
+
+
+
+
+export const getDeleteAccountMutationKey = () => ['deleteAccount'] as const;
+
+export const getDeleteAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,DeleteAccountMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,DeleteAccountMutationVariables, TContext> => {
+
+const mutationKey = getDeleteAccountMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAccount>>, DeleteAccountMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  deleteAccount(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAccountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAccount>>>
+    export type DeleteAccountMutationBody = BodyType<AccountDeletionRequest>
+    export type DeleteAccountMutationError = ErrorType<void>
+    export type DeleteAccountMutationVariables = {data: BodyType<AccountDeletionRequest>}
+
+    /**
+ * @summary Permanently delete the signed-in account and its owned businesses
+ */
+export const useDeleteAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,DeleteAccountMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAccount>>,
+        TError,
+        DeleteAccountMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAccountMutationOptions(options));
+    }
 
 export const getGetPublicMenuUrl = (slug: string,) => {
 

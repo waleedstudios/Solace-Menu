@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "SolaceMenu",
+    "slug": "solace-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "solace-mobile",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.solacemenu.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Scan restaurant menu QR codes and photograph supplier invoices.",
+        "NSPhotoLibraryUsageDescription": "Select invoice photos to upload securely to your restaurant."
+      }
+    },
+    "android": {},
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      ["expo-camera", { "cameraPermission": "Scan restaurant menu QR codes.", "microphonePermission": false, "recordAudioAndroid": false }],
+      ["expo-image-picker", { "photosPermission": "Choose supplier invoice photos.", "cameraPermission": "Photograph supplier invoices.", "microphonePermission": false }],
+      "expo-secure-store",
+      ["expo-splash-screen", { "image": "./assets/images/icon.png", "imageWidth": 180, "backgroundColor": "#ffffff" }]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

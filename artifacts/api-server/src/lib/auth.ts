@@ -31,6 +31,9 @@ export async function localUser(req: Request, required = true, allowIncomplete =
     if (required) throw new HttpError(401, "Please sign in.");
     return null;
   }
+  if ((await pool.query("SELECT 1 FROM account_deletions WHERE clerk_id = $1", [clerkId])).rowCount) {
+    throw new HttpError(403, "Your account is being permanently deleted.");
+  }
   const user = await findOrCreateIdentity(clerkId);
   if (!user.onboarding_complete && !allowIncomplete) {
     if (!required) return null;
@@ -73,7 +76,8 @@ async function findOrCreateIdentity(clerkId: string): Promise<LocalUser> {
 }
 
 export async function memberRole(userId: string, restaurantId: string): Promise<string | null> {
-  const result = await pool.query("SELECT role FROM restaurant_members WHERE user_id = $1 AND restaurant_id = $2", [userId, restaurantId]);
+  const result = await pool.query(`SELECT role FROM restaurant_members WHERE user_id = $1 AND restaurant_id = $2
+    AND NOT EXISTS (SELECT 1 FROM restaurants r JOIN account_deletions d ON d.user_id = r.owner_id WHERE r.id = $2)`, [userId, restaurantId]);
   return result.rows[0]?.role ?? null;
 }
 export async function authorizeRestaurant(userId: string, restaurantId: string, manage = false, owner = false): Promise<string> {
