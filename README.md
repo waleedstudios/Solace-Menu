@@ -1,4 +1,4 @@
-# Macro Menu Maestro
+# Solace Menu
 
 Build me a full-stack SaaS web application called “MacroMenu”.
 
