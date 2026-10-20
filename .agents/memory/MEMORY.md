@@ -7,3 +7,4 @@
 - [Expo SDK compatibility](expo-sdk-alignment.md) — align native modules with the active SDK, not stale example pins; keep supply-chain protections intact.
 - [Database timestamp precision](database-timestamp-precision.md) — preserve PostgreSQL precision when timestamps identify a background operation or guard a conditional update.
 - [Mobile test authentication](mobile-test-authentication.md) — a shared-host browser test session does not sign into the separate Expo preview origin.
+- [Git provider authentication](git-provider-auth.md) — trust live Git failures over healthy connection status; native Git reconnect forms may require account settings.
