@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { RestaurantProvider, useRestaurant } from "@/hooks/useRestaurant";
 import { dataApi as supabase } from "@/lib/data";
-import { useClerk } from "@clerk/react";
+import { useSignOut } from "@/lib/clerk";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, LayoutGrid, Carrot, Ruler, ExternalLink, LogOut, ScanLine, BookOpen, BarChart3, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Shell = () => {
   const navigate = useNavigate();
-  const { signOut: clerkSignOut } = useClerk();
+  const clerkSignOut = useSignOut();
   const { user } = useAuth();
   const { restaurant, role, canManage, loading, memberships, switchTo, error } = useRestaurant();
   const [slug, setSlug] = useState<string | null>(null);

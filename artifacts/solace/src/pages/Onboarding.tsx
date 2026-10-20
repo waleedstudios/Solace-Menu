@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useClerk } from "@clerk/react";
+import { useSignOut } from "@/lib/clerk";
 import { Loader2 } from "lucide-react";
 import { useAuth, type BusinessDetails } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ function validate(v: BusinessDetails): Errors {
 
 export default function Onboarding() {
   const { user, loading, error, completeOnboarding } = useAuth();
-  const { signOut } = useClerk();
+  const signOut = useSignOut();
   const navigate = useNavigate();
   const [form, setForm] = useState<BusinessDetails | null>(null);
   const [errors, setErrors] = useState<Errors>({});
