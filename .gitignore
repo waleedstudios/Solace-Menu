@@ -48,3 +48,17 @@ Thumbs.db
 .cache/
 .local/
 /generated-artifacts/
+
+# Local configuration and credentials (examples may be committed)
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.p12
+*.pfx
+
+# Private database exports and local backup files
+*.dump
+*.sql.gz
+/backups/

@@ -55,12 +55,14 @@ Solace helps restaurants manage ingredient nutrition and costs, build recipes, p
 - Legacy menu editor plus recipe-based public menus at `/r/:slug` and `/restaurant/:slug`
 - Invoice upload, AI extraction, line matching, approval, and ingredient price history
 - Sales import and recipe mapping, restaurant locations, team membership, settings
-- Native companion: customer discovery/saved menus/QR scanning and business onboarding, kitchen recipes, ingredients, menu publication, invoice photo capture, and account deletion. Advanced invoice review and sales/team administration remain on the website.
+- Native companion: customer discovery/saved menus/QR scanning and business onboarding, kitchen recipes, ingredients, menu publication, invoice photo capture, extraction, line matching, approval, and account deletion. Sales/team administration remains on the website.
 - Mobile release requirements are in `artifacts/solace-mobile/APP_STORE_CHECKLIST.md`. Native uses Clerk bearer tokens; the website retains cookie sessions. Both use the same backend and recipe engine.
 
 ## Migration boundaries
 
-- The Replit copy is independent. Changes here do not modify or automatically synchronize with Lovable.
+- Replit is the authoritative implementation in the existing GitHub repository, now named `waleedstudios/solace-menu`. Retain Lovable's access for possible UI/design work, but review and adapt those changes to this monorepo rather than restoring its old Supabase runtime.
+- GitHub reconciliation preserves the prior Lovable commits in merge history. Local `backup/github-before-replit-sync-2026-10-20` and `backup/replit-before-sync-2026-10-20` branches also preserve the pre-merge tips.
+- Changes do not safely synchronize both applications automatically. The Replit monorepo is not guaranteed to build in Lovable. See `README.md` for collaboration guidance and backup boundaries.
 - Existing hosted Lovable/Supabase accounts and private records have not been exported or imported; new accounts use Clerk.
 
 ## Gotchas
