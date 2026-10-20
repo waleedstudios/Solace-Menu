@@ -1,0 +1,57 @@
+name: SolaceMenu PR checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# PR code must not receive write access or repository/environment secrets.
+# Do not change this to pull_request_target.
+permissions:
+  contents: read
+
+concurrency:
+  group: solace-pr-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workspace-checks:
+    name: Workspace checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: "true"
+    steps:
+      - name: Check out proposed merge
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Reads the exact pnpm version from package.json.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.13.0"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck shared libraries and all applications
+        run: pnpm run typecheck
+
+      - name: Run deterministic web and recipe tests
+        run: pnpm --filter @workspace/solace run test
+
+      - name: Build restaurant website
+        env:
+          PORT: "3000"
+          BASE_PATH: /
+        run: pnpm --filter @workspace/solace run build
+
+      # Bundles only: does not start the API, connect to a DB, or run migrations.
+      - name: Build shared API
+        run: pnpm --filter @workspace/api-server run build

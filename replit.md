@@ -10,6 +10,7 @@ Solace helps restaurants manage ingredient nutrition and costs, build recipes, p
 - Managed workflows inject `PORT` and `BASE_PATH`; use them rather than starting duplicate servers.
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
+- GitHub PR checks use Node.js 24.13.0 / pnpm 10.26.1 with the frozen lockfile, full typecheck, deterministic web tests, and selected web/API bundle builds. They do not start services, push schema, use secrets, or deploy. See `README.md` for exact commands, exclusions, and review instructions.
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
