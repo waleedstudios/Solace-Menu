@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate, useNavigate } from "react-router-dom";
 import { ClerkProvider } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
-import { LocalAuthProvider, useAuth } from "./hooks/useAuth";
+import { LocalAuthProvider, SignedOutAuthProvider, useAuth } from "./hooks/useAuth";
+import { clerkEnabled } from "./lib/clerk";
 import { type ReactNode } from "react";
 import solaceLogo from "./assets/solace-logo.png";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -35,6 +36,11 @@ const clerkPubKey = publishableKeyFromHost(
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 
 function AuthProviders({ children }: { children: ReactNode }) {
+  if (!clerkEnabled) return <SignedOutAuthProvider>{children}</SignedOutAuthProvider>;
+  return <ClerkAuthProviders>{children}</ClerkAuthProviders>;
+}
+
+function ClerkAuthProviders({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const relative = (path: string) => basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path;
   return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl}

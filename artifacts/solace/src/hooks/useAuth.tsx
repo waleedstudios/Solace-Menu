@@ -17,6 +17,14 @@ const AuthContext = createContext<AuthContextValue>({
   completeOnboarding: async () => { throw new Error("Your account is not ready yet."); },
 });
 
+/** Used when no sign-in service is available (e.g. Lovable preview): always signed out. */
+export function SignedOutAuthProvider({ children }: { children: ReactNode }) {
+  return <AuthContext.Provider value={{
+    user: null, loading: false, error: null,
+    completeOnboarding: async () => { throw new Error("Sign-in isn't available in this preview."); },
+  }}>{children}</AuthContext.Provider>;
+}
+
 export function LocalAuthProvider({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn, user: clerkUser } = useUser();
   const queryClient = useQueryClient();
