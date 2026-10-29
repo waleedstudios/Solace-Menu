@@ -1,10 +1,10 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {LB,calculate,contributions,service,sales,recipes} from '../artifacts/solace/public/cover/data.js';
-test('purchase cost uses pounds explicitly',()=>assert.equal(calculate('salmon').cost,9.49/LB));
+test('purchase cost uses pounds explicitly',()=>assert.equal(calculate('chicken').cost,9.49/LB));
 test('prep allocates exact measured batch cost by yield',()=>assert.ok(Math.abs(calculate('spicyMayo').cost*600-(500*52.75/8000+80*3.45/750+20*9/500))<1e-10));
 test('cooked rice yield keeps purchase and serving weights separate',()=>assert.ok(Math.abs(calculate('cookedRice').cost*180-41.50/(50*LB)*60)<1e-12));
-test('recipe assembly reconciles to total',()=>assert.equal(contributions('roll').reduce((n,c)=>n+c.cost,0),calculate('roll').cost));
-test('price delta propagates by actual salmon quantity',()=>{for(const id of ['roll','burrito','nigiri','poke']){const grams=recipes[id].lines.find(l=>l[0]==='salmon')[1];assert.ok(Math.abs(calculate(id,{salmonPrice:9.49}).cost-calculate(id,{salmonPrice:8.99}).cost-.5/LB*grams)<1e-12)}});
-test('missing nutrition stays incomplete throughout nested recipes',()=>{const r=calculate('roll',{nutritionReady:false});assert.equal(r.complete,false);assert.equal(r.nutrition.calories,null);assert.equal(calculate('nigiri',{nutritionReady:false}).complete,true);assert.equal(calculate('roll',{missing:['crunch']}).complete,false)});
+test('recipe assembly reconciles to total',()=>assert.equal(contributions('bowl').reduce((n,c)=>n+c.cost,0),calculate('bowl').cost));
+test('price delta propagates by actual chicken quantity',()=>{for(const id of ['bowl','wrap','grilled','salad']){const grams=recipes[id].lines.find(l=>l[0]==='chicken')[1];assert.ok(Math.abs(calculate(id,{chickenPrice:9.49}).cost-calculate(id,{chickenPrice:8.99}).cost-.5/LB*grams)<1e-12)}});
+test('missing nutrition stays incomplete throughout nested recipes',()=>{const r=calculate('bowl',{nutritionReady:false});assert.equal(r.complete,false);assert.equal(r.nutrition.calories,null);assert.equal(calculate('grilled',{nutritionReady:false}).complete,true);assert.equal(calculate('bowl',{missing:['crunch']}).complete,false)});
 test('nutrition source basis and prep yield retained',()=>{assert.equal(calculate('mayo').nutrition.calories,100/15);assert.ok(Math.abs(calculate('spicyMayo').nutrition.calories-(500*100/15+80+20*120/14)/600)<1e-10)});
 test('sales reconciliation and contribution excludes overhead',()=>{const s=service();assert.equal(s.quantity,115);assert.equal(s.revenue,sales.reduce((n,r)=>n+r.quantity*recipes[r.recipe].price,0));assert.equal(s.contribution+s.cost,s.revenue);assert.equal(s.percent,s.cost/s.revenue*100)});
